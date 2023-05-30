@@ -87,7 +87,7 @@ class roboItem : public QObject, public QGraphicsItem {
   void drawLaserScan(QPainter *painter);
   void drawPlannerPath(QPainter *painter);
   void drawTools(QPainter *painter);
-  void poseLaserOdomToOdom(QPointF& mapOrigin_in_laserOdom);
+  void poseLaserOdomToOdom(QPointF& pose_in_laserOdom);
  private:
   VisualMode visual_mode_;
   int m_zoomState;

@@ -25,7 +25,7 @@ namespace ros_qt {
 /*****************************************************************************
 ** Implementation
 *****************************************************************************/
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QNode::QNode(int argc, char** argv) : init_argc(argc), init_argv(argv) {
   map_frame = "odom";
   base_frame = "base";
@@ -35,18 +35,20 @@ QNode::QNode(int argc, char** argv) : init_argc(argc), init_argv(argv) {
   qRegisterMetaType<QVector<int>>("QVector<int>");
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QNode::~QNode() {
-  qDebug() << "~QNode()";
+//  qDebug() << "~QNode()";
   if (ros::isStarted()) {
-    qDebug() << "shutdown()";
+//    qDebug() << "shutdown()";
     ros::shutdown();  // explicitly needed since we use ros::start();
     ros::waitForShutdown();
   }
-  qDebug() << "wait()";
+//  qDebug() << "wait()";
   wait();   // 等待线程结束
-  qDebug() << "wait() done";
+//  qDebug() << "wait() done";
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool QNode::init() {
   ros::init(init_argc, init_argv, "ros_qt5_gui_app",
             ros::init_options::AnonymousName);
@@ -60,7 +62,12 @@ bool QNode::init() {
   return true;
 }
 
-//初始化的函数*********************************
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::init 初始化的函数
+/// \param master_url
+/// \param host_url
+/// \return
+///
 bool QNode::init(const std::string& master_url, const std::string& host_url) {
   std::map<std::string, std::string> remappings;
   remappings["__master"] = master_url;
@@ -75,7 +82,9 @@ bool QNode::init(const std::string& master_url, const std::string& host_url) {
   return true;
 }
 
-// 创建订阅者与发布者
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::SubAndPubTopic 创建订阅者与发布者
+///
 void QNode::SubAndPubTopic() {
   ros::NodeHandle n;
   // Add your ros communications here.
@@ -128,6 +137,7 @@ void QNode::SubAndPubTopic() {
 //  movebase_client->waitForServer(ros::Duration(1.0));
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QMap<QString, QString> QNode::get_topic_list() {
   ros::master::V_TopicInfo topic_list;
   ros::master::getTopics(topic_list);
@@ -139,7 +149,10 @@ QMap<QString, QString> QNode::get_topic_list() {
   return res;
 }
 
-// planner的路径话题回调
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::plannerPathCallback planner的路径话题回调
+/// \param path
+///
 void QNode::plannerPathCallback(nav_msgs::Path::ConstPtr path) {
   plannerPoints.clear();
   for (int i = 0; i < (int)path->poses.size(); i++) {
@@ -150,7 +163,10 @@ void QNode::plannerPathCallback(nav_msgs::Path::ConstPtr path) {
   emit plannerPath(plannerPoints);
 }
 
-// 激光雷达静态点云话题回调
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::stableLaserPointCallback 激光雷达静态点云话题回调
+/// \param laser_msg
+///
 void QNode::stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg) {
   stableLaserPoints.clear();
 
@@ -161,10 +177,13 @@ void QNode::stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg) 
   emit updateStableLaserScan(stableLaserPoints);
 }
 
-// 激光雷达动态点云话题回调
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::dynamicLaserPointCallback 激光雷达动态点云话题回调
+/// \param laser_msg
+///
 void QNode::dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg) {
   dynamicLaserPoints.clear();
-  qDebug() << "dynamicLaserPointCallback";
+
   for (int i = 0; i < (int)laser_msg->points.size(); i++) {
     QPointF pos(laser_msg->points[i].x, laser_msg->points[i].y);
     dynamicLaserPoints.append(pos);
@@ -172,6 +191,7 @@ void QNode::dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg)
   emit updateDynamicLaserScan(dynamicLaserPoints);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::updateRobotPose() {
   try {
     tf::StampedTransform transform;
@@ -202,15 +222,24 @@ void QNode::updateRobotPose() {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::batteryCallback(const sensor_msgs::BatteryState& message) {
   emit batteryState(message);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::myCallback(const std_msgs::Float64& message_holder) {
   qDebug() << message_holder.data << endl;
 }
 
-//发布导航目标点信息
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::set_goal 发布导航目标点信息
+/// \param frame
+/// \param x
+/// \param y
+/// \param z
+/// \param w
+///
 void QNode::set_goal(QString frame, double x, double y, double z, double w) {
   geometry_msgs::PoseStamped goal;
   //设置frame
@@ -225,7 +254,10 @@ void QNode::set_goal(QString frame, double x, double y, double z, double w) {
   goal_pub.publish(goal);
 }
 
-//地图信息订阅回调函数
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::mapCallback 地图信息订阅回调函数
+/// \param msg
+///
 void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
   int width = msg->info.width;
   int height = msg->info.height;
@@ -264,12 +296,16 @@ void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
   emit updateSubGridMap(map_image, mapOrigin, m_mapResolution, width, height);
 }
 
-//速度回调函数
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::speedCallback 速度回调函数
+/// \param msg
+///
 void QNode::speedCallback(const nav_msgs::Odometry::ConstPtr& msg) {
   emit speed_x(msg->twist.twist.linear.x);
   emit speed_y(msg->twist.twist.linear.y);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::run() {
   ros::Rate loop_rate(m_frameRate);
   ros::AsyncSpinner spinner(m_threadNum);
@@ -285,9 +321,14 @@ void QNode::run() {
   rosShutdown();  // used to signal the gui for a shutdown (useful to roslaunch)
 }
 
-//发布机器人速度控制
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::move_base 发布机器人速度控制
+/// \param k
+/// \param speed_linear
+/// \param speed_trun
+///
 void QNode::move_base(char k, float speed_linear, float speed_trun) {
-  std::map<char, std::vector<float>> moveBindings{
+  std::map<char, std::vector<float>> moveBindings {
       {'i', {1, 0, 0, 0}},  {'o', {1, 0, 0, -1}},  {'j', {0, 0, 0, 1}},
       {'l', {0, 0, 0, -1}}, {'u', {1, 0, 0, 1}},   {',', {-1, 0, 0, 0}},
       {'.', {-1, 0, 0, 1}}, {'m', {-1, 0, 0, -1}}, {'O', {1, -1, 0, 0}},
@@ -319,7 +360,9 @@ void QNode::move_base(char k, float speed_linear, float speed_trun) {
   ros::spinOnce();
 }
 
-//订阅图片话题，并在label上显示
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// 订阅图片话题，并在label上显示
 // void QNode::SubImage(QString topic, int frame_id) {
 //   ros::NodeHandle n;
 // //  image_transport::ImageTransport it_(n);
@@ -333,6 +376,7 @@ void QNode::move_base(char k, float speed_linear, float speed_trun) {
 //   ros::spinOnce();
 // }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::pub2DPose(QPointF start_pose,QPointF end_pose){
     start_pose =transScenePoint2Word(start_pose);
     end_pose =transScenePoint2Word(end_pose);
@@ -351,6 +395,7 @@ void QNode::pub2DPose(QPointF start_pose,QPointF end_pose){
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::pub2DGoal(QPointF start_pose,QPointF end_pose){
     start_pose =transScenePoint2Word(start_pose);
     end_pose =transScenePoint2Word(end_pose);
@@ -367,6 +412,7 @@ void QNode::pub2DGoal(QPointF start_pose,QPointF end_pose){
     movebase_client->sendGoal(goal);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QPointF QNode::transScenePoint2Word(QPointF pose) {
   QPointF res;
   res.setX((pose.x() - m_wordOrigin.x()) * m_mapResolution);
@@ -375,6 +421,7 @@ QPointF QNode::transScenePoint2Word(QPointF pose) {
   return res;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QPointF QNode::transWordPoint2Scene(QPointF pose) {
   //    qDebug()<<pose;
   QPointF res;
@@ -420,7 +467,7 @@ QPointF QNode::transWordPoint2Scene(QPointF pose) {
 //     return;
 //   }
 // }
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QImage QNode::rotateMapWithY(QImage map) {
   QImage res = map;
   for (int x = 0; x < map.width(); x++) {
@@ -431,6 +478,7 @@ QImage QNode::rotateMapWithY(QImage map) {
   return res;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QImage QNode::Mat2QImage(cv::Mat const& src) {
   QImage dest(src.cols, src.rows, QImage::Format_ARGB32);
 
@@ -495,6 +543,7 @@ QImage QNode::Mat2QImage(cv::Mat const& src) {
 //  return mat;
 //}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::log(const LogLevel& level, const std::string& msg) {
   logging_model.insertRows(logging_model.rowCount(), 1);
   std::stringstream logging_model_msg;

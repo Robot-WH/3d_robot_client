@@ -3,7 +3,7 @@
 #include <QDebug>
 
 namespace ros_qt {
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 roboItem::roboItem() {
   setAcceptHoverEvents(true);
   setAcceptedMouseButtons(Qt::AllButtons);
@@ -19,6 +19,7 @@ roboItem::roboItem() {
   visual_mode_ = VisualMode::internal_tracking;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setRobotVis(eRobotColor color) {
   switch (color) {
     case eRobotColor::blue: {
@@ -36,8 +37,10 @@ void roboItem::setRobotVis(eRobotColor color) {
   robotImg = robotImg.transformed(matrix, Qt::SmoothTransformation);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setRobotSize(QSize size) { robotImg = robotImg.scaled(size); }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 int roboItem::QColorToInt(const QColor &color) {
   //将Color 从QColor 转换成 int
   return (int)(((unsigned int)color.blue() << 16) |
@@ -45,6 +48,7 @@ int roboItem::QColorToInt(const QColor &color) {
                                 color.red()));
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::paintImage(int id, QImage image) { m_image = image; }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,25 +86,31 @@ void roboItem::paintDynamicLaserScan(QPolygonF points) {
   update();
 }
 
-// palnner规划path绘制
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief roboItem::paintPlannerPath
+///               palnner规划path绘制
+/// \param path
+///
 void roboItem::paintPlannerPath(QPolygonF path) {
   plannerPath = path;
   update();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::paintMaps(QImage map) {
   m_imageMap = map;
   update();
 }
 
-/**
- * @brief roboItem::paintSubGridMap 绘制子栅格地图
- * @param map
- * @param mapOrigin map左下角相对于激光ODOM坐标系的位置
- * @param res 分辨率
- * @param width 像素宽size
- * @param height 像素高size
- */
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief roboItem::paintSubGridMap 绘制子栅格地图
+/// \param map
+/// \param mapOrigin map左下角相对于激光ODOM坐标系的位置
+/// \param res 分辨率
+/// \param width 像素宽size
+/// \param height 像素高size
+///
 void roboItem::paintSubGridMap(QImage map, QPointF mapOrigin, float res, int width, int height) {
 //  qDebug() << "paintSubGridMap";
 //  qDebug() << "width: " << width << ",height: " << height << ", res: " << res;
@@ -116,19 +126,18 @@ void roboItem::paintSubGridMap(QImage map, QPointF mapOrigin, float res, int wid
   update();
 }
 
-/**
- * @brief roboItem::poseLaserOdomToOdom 激光odom坐标系转odom坐标系
- *                  底层算法发送过来的地图原点坐标是相对于激光odom坐标系的，而实际上
- *                  我们上层应用的是odom坐标系
- * @param pose_in_laser
- * @param pose_in_world
- */
-void roboItem::poseLaserOdomToOdom(QPointF& mapOrigin_in_laserOdom) {
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief roboItem::poseLaserOdomToOdom 激光odom坐标系转odom坐标系
+///               底层算法发送过来的地图原点坐标是相对于激光odom坐标系的，而实际上
+///               我们上层应用的是odom坐标系
+/// \param mapOrigin_in_laserOdom
+///
+void roboItem::poseLaserOdomToOdom(QPointF& pose_in_laserOdom) {
     /**
      * @todo: 这里只考虑了颠倒，需要再加入外参
      **/
     if (laser_upside_down_) {
-        mapOrigin_in_laserOdom.setY(-mapOrigin_in_laserOdom.y());
+        pose_in_laserOdom.setY(-pose_in_laserOdom.y());
     }
 }
 
