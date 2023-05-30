@@ -1,25 +1,39 @@
 ##############################################################################
 # CMake
 ##############################################################################
+cmake_minimum_required(VERSION 3.0.2)
+project(my_gui)
 
-cmake_minimum_required(VERSION 2.8.0)
-project(ros_qt5_gui_app)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+# set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+# 将包含build目录下的头文件，qt会生成moc_中间头文件以及ui_xxx.h 头文件
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-#添加c++11的支持
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+
 ##############################################################################
 # Catkin
 ##############################################################################
 # qt_build provides the qt cmake glue, roscpp the comms for a default talker
-find_package(catkin REQUIRED COMPONENTS roscpp 
+find_package(catkin REQUIRED COMPONENTS 
+    nav_msgs     # nav_msgs 必须在tf之前，否则会出现 没有规则可制作目标“/opt/ros/melodic_arm_arm/lib/libroscpp.so”的错误
+    roscpp 
     tf
     sensor_msgs
-    cv_bridge
+    # cv_bridge
     std_msgs
-    image_transport
+    
+#    image_transport   
     )
 
-include_directories(${catkin_INCLUDE_DIRS} ./include)
+find_package(OpenCV REQUIRED)
+
+include_directories(
+    ${catkin_INCLUDE_DIRS} 
+    ${OpenCV_INCLUDE_DIRS}
+    ./include)
 # Use this to define what the package will export (e.g. libs, headers).
 # Since the default here is to produce only a binary, we don't worry about
 # exporting anything. 
@@ -35,24 +49,25 @@ catkin_package()
 
 #######
 ## 安装多个 Qt 版本时, 可能会导致无法使用特定的 Qt 版本. 需要设置 CMAKE_PREFIX_PATH 为所用 Qt 的安装路径, 但是还需要设置 Qt[Module]_DIR(例如: QtCore_DIR) 等变量. 下面这一段代码自动会修改 ModuleList 中的所有模块, 并自动设置 Qt[Module]_DIR变量; 同时 target_link_libraries.
-set(CMAKE_PREFIX_PATH "/opt/Qt5.12.6/5.12.6/gcc_64")
+# set(CMAKE_PREFIX_PATH "/opt/Qt5.12.6/5.12.6/gcc_64")
 set(ModuleList 
     Core
     Gui
     Widgets
-    Multimedia
+#    Multimedia
     Network
 )
 
+find_package(Qt5 REQUIRED ${ModuleList})
+
 foreach(QtModule ${ModuleList})
-    set(Qt5${QtModule}_DIR ${CMAKE_PREFIX_PATH}/lib/cmake/Qt5${QtModule})
-    message("foreach-> Qt5${QtModule}_DIR : ${Qt5${QtModule}_DIR}")
+    # set(Qt5${QtModule}_DIR ${CMAKE_PREFIX_PATH}/lib/cmake/Qt5${QtModule})
+    # message("foreach-> Qt5${QtModule}_DIR : ${Qt5${QtModule}_DIR}")
 
     set(QT_LIBRARIES ${QT_LIBRARIES} Qt5::${QtModule})
 endforeach()
 message("${QT_LIBRARIES}")
 
-find_package(Qt5 REQUIRED ${ModuleList})
 #######
 
 ##############################################################################
@@ -83,9 +98,10 @@ file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINK
 # Binaries
 ##############################################################################
 
-add_executable(ros_qt5_gui_app ${QRC_FILES} ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${QT_MOC_HPP})
-target_link_libraries(ros_qt5_gui_app ${QT_LIBRARIES} ${catkin_LIBRARIES})
-install(TARGETS ros_qt5_gui_app RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+add_executable(my_gui_app ${QRC_FILES} ${QT_SOURCES} ${QT_RESOURCES_CPP} 
+                                        ${QT_FORMS_HPP} ${QT_MOC_HPP})
+target_link_libraries(my_gui_app ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
+install(TARGETS my_gui_app RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #############################################################################
 #HTML 将html文件拷贝到可执行文件同级目录

@@ -14,7 +14,7 @@
 #include <QDesktopWidget>
 #include <QtGui>
 
-#include "loginwidget.h"
+#include "MainWindow.h"
 
 /*****************************************************************************
 ** Main
@@ -28,11 +28,12 @@ int main(int argc, char **argv) {
   //共享opengl上下文
   //    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts)
   //    QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL);
-  //记住上一次的窗体大小和位置
-  LoginWidget w;
-  w.show();
-  app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
-  int result = app.exec();
+  MainWindow w(argc, argv);
+// w.showFullScreen();
+   w.show();
+//  app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
+  QObject::connect(&w, &MainWindow::Quit, &app, &QCoreApplication::quit);
+  int result = app.exec();  // 程序执行  相当于不停的循环
 
   return result;
 }

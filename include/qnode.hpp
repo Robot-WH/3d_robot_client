@@ -27,13 +27,14 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
-#include <image_transport/image_transport.h>  //image_transport
+//#include <image_transport/image_transport.h>  //image_transport
 #include <move_base_msgs/MoveBaseAction.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <sensor_msgs/BatteryState.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>  //图像编码格式
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
@@ -57,7 +58,7 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>
 ** Namespaces
 *****************************************************************************/
 
-namespace ros_qt5_gui_app {
+namespace ros_qt {
 
 /*****************************************************************************
 ** Class
@@ -72,14 +73,14 @@ class QNode : public QThread {
   bool init(const std::string &master_url, const std::string &host_url);
   void move_base(char k, float speed_linear, float speed_trun);
   void set_goal(QString frame, double x, double y, double z, double w);
-  void Sub_Image(QString topic, int frame_id);
-  void pub_imageMap(QImage map);
+  // void SubImage(QString topic, int frame_id);
+//  void pub_imageMap(QImage map);
   QPointF transScenePoint2Word(QPointF pos);
   QPointF transWordPoint2Scene(QPointF pos);
   QMap<QString, QString> get_topic_list();
   int mapWidth{0};
   int mapHeight{0};
-  void run();
+  void run();             // 线程执行函数    继承自QThread
 
   /*********************
   ** Logging
@@ -102,8 +103,10 @@ class QNode : public QThread {
   void Show_image(int, QImage);
   void updateRoboPose(RobotPose pos);
   void updateMap(QImage map);
+  void updateSubGridMap(QImage map, QPointF mapOrigin, float res, int width, int height);
   void plannerPath(QPolygonF path);
-  void updateLaserScan(QPolygonF points);
+  void updateStableLaserScan(QPolygonF points);
+  void updateDynamicLaserScan(QPolygonF points);
   void updateRobotStatus(RobotStatus status);
 
  private:
@@ -113,7 +116,8 @@ class QNode : public QThread {
   ros::Subscriber cmdVel_sub;
   ros::Subscriber chatter_subscriber;
   ros::Subscriber pos_sub;
-  ros::Subscriber m_laserSub;
+  ros::Subscriber stable_laser_point_sub_;
+  ros::Subscriber dynamic_laser_point_sub_;
   ros::Subscriber battery_sub;
   ros::Subscriber m_plannerPathSub;
   ros::Subscriber m_compressedImgSub0;
@@ -121,12 +125,12 @@ class QNode : public QThread {
   ros::Publisher goal_pub;
   ros::Publisher cmd_pub;
   ros::Publisher m_initialposePub;
-  image_transport::Publisher m_imageMapPub;
+//  image_transport::Publisher m_imageMapPub;
   MoveBaseClient *movebase_client;
   QStringListModel logging_model;
   QString show_mode = "control";
   //图像订阅
-  image_transport::Subscriber image_sub0;
+//  image_transport::Subscriber image_sub0;
   //地图订阅
   ros::Subscriber map_sub;
   //图像format
@@ -134,15 +138,17 @@ class QNode : public QThread {
   QString odom_topic;
   QString batteryState_topic;
   QString pose_topic;
-  QString laser_topic;
+  QString stable_laser_point_topic;
+  QString dynamic_laser_point_topic;
   QString map_topic;
   QString initPose_topic;
   QString naviGoal_topic;
   std::string path_topic;
   QPolygon mapPonits;
   QPolygonF plannerPoints;
-  QPolygonF laserPoints;
-  int m_threadNum = 4;
+  QPolygonF stableLaserPoints;
+  QPolygonF dynamicLaserPoints;
+  int m_threadNum = 2;
   int m_frameRate = 40;
   //地图 0 0点坐标对应世界坐标系的坐标
   float m_mapOriginX;
@@ -156,7 +162,7 @@ class QNode : public QThread {
   // tf::TransformListener m_tfListener(ros::Duration(10));
   // ros::Timer m_rosTimer;
   QImage Mat2QImage(cv::Mat const &src);
-  cv::Mat QImage2Mat(QImage &image);
+//  cv::Mat QImage2Mat(QImage &image);
   QImage rotateMapWithY(QImage map);
   tf::TransformListener *m_robotPoselistener;
   tf::TransformListener *m_Laserlistener;
@@ -165,11 +171,14 @@ class QNode : public QThread {
  private:
   void speedCallback(const nav_msgs::Odometry::ConstPtr &msg);
   void batteryCallback(const sensor_msgs::BatteryState &message);
-  void imageCallback0(const sensor_msgs::CompressedImageConstPtr &msg);
-  void imageCallback1(const sensor_msgs::CompressedImageConstPtr &msg);
+  // void imageCallback0(const sensor_msgs::CompressedImageConstPtr &msg);
+  // void imageCallback1(const sensor_msgs::CompressedImageConstPtr &msg);
   void myCallback(const std_msgs::Float64 &message_holder);
   void mapCallback(nav_msgs::OccupancyGrid::ConstPtr map);
-  void laserScanCallback(sensor_msgs::LaserScanConstPtr scan);
+//  void stableLaserPointCallback(sensor_msgs::LaserScanConstPtr scan);
+//  void dynamicLaserPointCallback(sensor_msgs::LaserScanConstPtr scan);
+  void stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
+  void dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
   void plannerPathCallback(nav_msgs::Path::ConstPtr path);
   void SubAndPubTopic();
   void updateRobotPose();
