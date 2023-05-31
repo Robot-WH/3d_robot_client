@@ -99,6 +99,7 @@ class roboItem : public QObject, public QGraphicsItem {
   qreal m_scaleValue = 0.2;
   qreal m_scaleMin = 0.01;
   float map_resolution_ = 0.05;    // 地图局部分辨率
+  float expansion_coef_ = 0.1;     // 地图分辨率的放大系数
 };
 }  // namespace ros_qt5_gui_app
 #endif  // roboItem_H

@@ -261,6 +261,8 @@ void QNode::set_goal(QString frame, double x, double y, double z, double w) {
 void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
   int width = msg->info.width;
   int height = msg->info.height;
+//  int width = 100;
+//  int height = 100;
   QImage map_image(width, height, QImage::Format_RGB32);
 
   for (int i = 0; i < (int)msg->data.size(); i++) {
@@ -278,6 +280,15 @@ void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
     // 在ROS中，y朝上，而在Qt中，y朝下，因此这里刚好把图片给颠倒了
     map_image.setPixel(x, y, qRgb(color.red(), color.green(), color.blue()));
   }
+//  for (int i = 0; i < 10000; i++) {
+//    int x = i % width;
+//    int y = (int)i / width;
+//    //计算像素值
+//    QColor color;
+//     color = Qt::red;  // black
+//    // 在ROS中，y朝上，而在Qt中，y朝下，因此这里刚好把图片给颠倒了
+//    map_image.setPixel(x, y, qRgb(color.red(), color.green(), color.blue()));
+//  }
   //延y翻转地图 因为解析到的栅格地图的坐标系原点为左下角
   //但是图元坐标系为左上角度
 //  map_image = rotateMapWithY(map_image);

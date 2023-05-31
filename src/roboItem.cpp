@@ -1,7 +1,8 @@
 #include "roboItem.h"
 #include "ui_MainWindow.h"    // build/my_gui下
 #include <QDebug>
-
+#include <iostream>
+#include <iomanip>
 namespace ros_qt {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 roboItem::roboItem() {
@@ -35,6 +36,7 @@ void roboItem::setRobotVis(eRobotColor color) {
   QMatrix matrix;
   matrix.rotate(90);
   robotImg = robotImg.transformed(matrix, Qt::SmoothTransformation);
+  robotImg = robotImg.scaled(robotImg.width() / expansion_coef_, robotImg.height() / expansion_coef_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,6 +66,7 @@ void roboItem::paintStableLaserScan(QPolygonF points) {
     points[i].setX(points[i].x() / map_resolution_);
     points[i].setY(-points[i].y() / map_resolution_);
   }
+
   stableLaserPoints = points;
   update();
 }
@@ -115,13 +118,15 @@ void roboItem::paintSubGridMap(QImage map, QPointF mapOrigin, float res, int wid
 //  qDebug() << "paintSubGridMap";
 //  qDebug() << "width: " << width << ",height: " << height << ", res: " << res;
 //  qDebug() << "mapOrigin x: " << mapOrigin.x() << ",y: " << mapOrigin.y();
-  if (map_resolution_ != res) {
-    map_resolution_ = res;
+  if (map_resolution_ != res * expansion_coef_) {
+    map_resolution_ = res * expansion_coef_;    // 可视化的分辨率 和 实际物理分辨率 差一个 expansion_coef_的倍数
   }
+
   poseLaserOdomToOdom(mapOrigin);
   SubGridMapOrigin.setX(mapOrigin.x() / map_resolution_);
   SubGridMapOrigin.setY(-mapOrigin.y() / map_resolution_);   // qt中视图坐标系y的方向和机器人坐标系相反 所以要-
-  m_imageMap = map;
+  // map 是物理尺度分辨率下的图片，显示时要转换到显示尺度分辨率下
+  m_imageMap = map.scaled(width / expansion_coef_, height / expansion_coef_);
 //  m_imageMap = map.scaled(100, 100, Qt::KeepAspectRatio);
   update();
 }
@@ -141,6 +146,7 @@ void roboItem::poseLaserOdomToOdom(QPointF& pose_in_laserOdom) {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::paintRoboPos(RobotPose pos) {
 //  qDebug()<<"pos:"<<pos.x<<" "<<pos.y<<" "<<pos.theta;
   RoboPostion = QPointF(pos.x / map_resolution_, -pos.y / map_resolution_);   // y坐标颠倒
@@ -148,6 +154,7 @@ void roboItem::paintRoboPos(RobotPose pos) {
   update();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                                           QWidget *widget) {
     drawMap(painter);
@@ -157,6 +164,7 @@ void roboItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
   //  drawTools(painter);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::drawTools(QPainter *painter) {
   if (m_currCursor == set2DPoseCursor || m_currCursor == set2DGoalCursor) {
       //绘制箭头
@@ -192,10 +200,15 @@ void roboItem::drawTools(QPainter *painter) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::drawMap(QPainter* painter) {
+  // 这个sb drawImage()函数绘制图片时的原点坐标只能是整型，
+  // 例如 painter->drawImage(17.6, 15.4, m_imageMap), 那么实际上绘图的原点坐标是(17, 15)
+  // 这也是为什么可视化分辨率相比物理分辨率要进行膨胀的原因
   painter->drawImage(SubGridMapOrigin.x(), SubGridMapOrigin.y(), m_imageMap);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::drawRoboPos(QPainter *painter) {
 //  qDebug() << "drawRoboPos";
 //  qDebug() << "RoboPostion.x()： "<<RoboPostion.x() << "RoboPostion.y(): " << RoboPostion.y();
@@ -219,55 +232,65 @@ void roboItem::drawRoboPos(QPainter *painter) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::drawLaserScan(QPainter *painter) {
   //绘制laser
-  painter->setPen(QPen(QColor(0, 255, 0, 255), 1));
+  painter->setPen(QPen(QColor(0, 255, 0, 255), 1 / expansion_coef_));
   painter->drawPoints(stableLaserPoints);
 
-  painter->setPen(QPen(QColor(255, 0, 0, 255), 1));
+  painter->setPen(QPen(QColor(255, 0, 0, 255), 1 / expansion_coef_));
   painter->drawPoints(dynamicLaserPoints);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::drawPlannerPath(QPainter *painter) {
   //绘制planner Path
-  painter->setPen(QPen(QColor(0, 0, 0, 255), 1));
+  painter->setPen(QPen(QColor(0, 0, 0, 255), 1 / expansion_coef_));
   painter->drawPoints(plannerPath);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 const QPointF& roboItem::GetRoboPos() const {
   return RoboPostion;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 float roboItem::GetScale() const {
   return m_scaleValue;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::SetVisualMode(VisualMode mode) {
     visual_mode_ = mode;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setMax() {
   m_scaleValue *= 1.1;  //每次放大10%
   setScale(m_scaleValue);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setMin() {
   m_scaleValue *= 0.9;  //每次缩小10%
   setScale(m_scaleValue);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setDefaultScale() {
-  m_scaleValue = 2;
+  m_scaleValue = 0.2;
   this->setScale(m_scaleValue);
 //  this->moveBy(0, 0);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 QRectF roboItem::boundingRect() const {
   //设置当前item绘制区域 (x,y,width,height)
   return QRectF(-m_imageMap.width() * 5, -m_imageMap.height() * 5,
                                 m_imageMap.width() * 10, m_imageMap.height() * 10);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::move(double x, double y) { this->moveBy(x, y); }
 
 
@@ -318,32 +341,33 @@ void roboItem::ChangeScale(bool type, const QPointF& center) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::slot_set2DPos() {
   this->setCursor(*set2DPoseCursor);  //设置自定义的鼠标样式
   m_currCursor = set2DPoseCursor;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::slot_set2DGoal() {
   this->setCursor(*set2DGoalCursor);  //设置自定义的鼠标样式
   m_currCursor = set2DGoalCursor;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::slot_setMoveCamera() {
   this->setCursor(*m_moveCursor);  //设置自定义的鼠标样式
   m_currCursor = m_moveCursor;
 }
 
-/**
- * @brief roboItem::mousePressEvent
- *                事件处理函数，用于处理鼠标按下事件。
- *                当鼠标在图元上按下时，系统将触发 mousePressEvent() 函数
- * @param event
- */
-void roboItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
-{
-    qDebug() << "mousePressEvent";
-  if (event->button() == Qt::LeftButton)
-  {
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief roboItem::mousePressEvent
+///             事件处理函数，用于处理鼠标按下事件。
+///             当鼠标在图元上按下时，系统将触发 mousePressEvent() 函数
+/// \param event
+///
+void roboItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+//    qDebug() << "mousePressEvent";
+  if (event->button() == Qt::LeftButton) {
     m_startPose = event->pos();  //鼠标左击时，获取当前鼠标在图片中的坐标，
     qDebug() << "Press pos x: " << m_startPose.x() << ",y: " << m_startPose.y();
     m_isMousePress = true;  //标记鼠标左键被按下
@@ -353,19 +377,16 @@ void roboItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 //  update();
  }
 
-
-void roboItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
-{
-  qDebug() << "mouseMoveEvent";
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void roboItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+//  qDebug() << "mouseMoveEvent";
   //设置鼠标样式为移动
-  if (m_currCursor != m_moveCursor)
-  {
+  if (m_currCursor != m_moveCursor) {
     this->setCursor(*m_moveCursor);  //设置自定义的鼠标样式
     m_currCursor = m_moveCursor;
   }
   //移动图层
-  if (m_isMousePress && m_currCursor == m_moveCursor)
-  {
+  if (m_isMousePress && m_currCursor == m_moveCursor) {
     QPointF point = (event->pos() - m_startPose) * m_scaleValue;
     moveBy(point.x(), point.y());
   }
@@ -378,19 +399,16 @@ void roboItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 //  emit cursorPos(event->pos());
 //}
 
-void roboItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
-{
-  qDebug() << "mouseReleaseEvent";
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void roboItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
+//  qDebug() << "mouseReleaseEvent";
   m_isMousePress = false;  //标记鼠标左键已经抬起
   //如果是选择点位模式 重置
-  if (m_currCursor == set2DPoseCursor)
-  {
+  if (m_currCursor == set2DPoseCursor) {
       emit signalPub2DPose(m_startPose,m_endPose);
       m_currCursor=m_moveCursor;
       this->setCursor(*m_currCursor);
-  }
-  else if (m_currCursor == set2DGoalCursor)
-  {
+  } else if (m_currCursor == set2DGoalCursor) {
       emit signalPub2DGoal(m_startPose,m_endPose);
       m_currCursor=m_moveCursor;
       this->setCursor(*m_currCursor);

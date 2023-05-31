@@ -103,6 +103,8 @@ void MainWindow::initUI() {
   ui->groupBox_5->setFixedWidth(40);
 //  ui->groupBox_5->setStyleSheet("QGroupBox { padding: 2px; }");
   ui->groupBox_5->setStyleSheet("QGroupBox { border: none; }");
+
+//  ui->bringup_button->setBackgroundRole();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -225,9 +227,9 @@ void MainWindow::slot_roboPos(QPointF pos) {
   QPointF ScenePos = roboItem_->mapToScene(pos);
   QPointF ViewPos = ui->mapViz->mapFromScene(ScenePos);
   QRect view_rect = ui->mapViz->viewport()->rect();   // 获取视图坐标范围
-//  qDebug() << "view_rect.width(): " << view_rect.width() << ", view_rect.height(): " << view_rect.height();
-  if (ViewPos.x() < 200 || ViewPos.x() > view_rect.width() - 200
-        || ViewPos.y() < 200 || ViewPos.y() > view_rect.height() - 200) {
+//  qDebug() << "ViewPos.x(): " << ViewPos.x() << ", y: " << ViewPos.y();
+  if (ViewPos.x() < view_rect.width() * 0.2 || ViewPos.x() > view_rect.width() * 0.8
+        || ViewPos.y() < view_rect.height() * 0.2 || ViewPos.y() > view_rect.height() * 0.8) {
     // 视图中心的item坐标系坐标
     QPointF scene_center = ui->mapViz->mapToScene(view_rect.center());   // 视图坐标系转换到scene坐标系
     QPointF scene_center_itempos = roboItem_->mapFromScene(scene_center);   // 再由scene坐标系转换到Item坐标系
