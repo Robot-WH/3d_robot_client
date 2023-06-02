@@ -37,6 +37,7 @@ class roboItem : public QObject, public QGraphicsItem {
   float GetScale() const;
   void SetVisualMode(VisualMode mode);
   void setRobotVis(eRobotColor color);
+  void SetLaserInverted(bool flag);
   void setRobotSize(QSize size);
   void ChangeScale(bool type, const QPointF& center);
   QPolygon MapPoints;
@@ -88,6 +89,7 @@ class roboItem : public QObject, public QGraphicsItem {
   void drawPlannerPath(QPainter *painter);
   void drawTools(QPainter *painter);
   void poseLaserOdomToOdom(QPointF& pose_in_laserOdom);
+  void transformMapFromLaserOdomToOdom(QImage& map);
  private:
   VisualMode visual_mode_;
   int m_zoomState;

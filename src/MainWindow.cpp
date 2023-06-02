@@ -67,8 +67,14 @@ void MainWindow::initUI() {
 //  ui->label_robot_img->setPixmap(QPixmap("://images/robot.png"));
 //  ui->label_robot_img->setScaledContents(true);  // 设置QLabel的内容自适应缩放
   ui->pushButton_plus->setIcon(QIcon(":/images/plus.png"));
+  ui->pushButton_plus->setFixedHeight(50);
+  ui->pushButton_plus->setFixedWidth(50);
   ui->pushButton_minus->setIcon(QIcon(":/images/minus.png"));
+  ui->pushButton_minus->setFixedHeight(50);
+  ui->pushButton_minus->setFixedWidth(50);
   ui->pushButton_return->setIcon(QIcon(":/images/set_return.png"));
+  ui->pushButton_return->setFixedHeight(50);
+  ui->pushButton_return->setFixedWidth(50);
   //视图场景加载
   qgraphicsScene_ =
       new QGraphicsScene;  //要用QGraphicsView就必须要有QGraphicsScene搭配着用
@@ -84,7 +90,11 @@ void MainWindow::initUI() {
 //  QPointF sceneCenter = ui->mapViz->mapToScene(ui->mapViz->viewport()->rect().topLeft());
 //  qDebug() << "sceneCenter w:" << sceneCenter.x() << ", h: " << sceneCenter.y();
   // 视图内   显示内容UI设置
-  QString styleSheet = "QCheckBox { color: black; }";
+  QString styleSheet = "QCheckBox::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
+        QCheckBox{font-size: 22px;color: rgb(0, 191, 255);}\
+        QCheckBox::checked{color:rgb(0, 191, 255);}\
+        QCheckBox::unchecked{color:rgb(119, 136, 153);}\
+        ";
   ui->checkBox->setStyleSheet(styleSheet);
   ui->checkBox_2->setStyleSheet(styleSheet);
   ui->checkBox_3->setStyleSheet(styleSheet);
@@ -92,19 +102,31 @@ void MainWindow::initUI() {
   ui->checkBox_5->setStyleSheet(styleSheet);
   ui->checkBox_6->setStyleSheet(styleSheet);
   // 视图内   视角选择UI设置
-  styleSheet = "QRadioButton { color: black; }";
+  styleSheet = "QRadioButton::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
+      QRadioButton{font-size: 22px;color: rgb(0, 191, 255);}\
+      QRadioButton::checked{color:rgb(0, 191, 255);}\
+      QRadioButton::unchecked{color:rgb(119, 136, 153);}\
+      ";
   ui->radioButton->setStyleSheet(styleSheet);
   ui->radioButton_2->setStyleSheet(styleSheet);
+  ui->radioButton_4->setStyleSheet(styleSheet);
   ui->radioButton_4->setChecked(true);
 
-  ui->groupBox_3->setFixedWidth(300);
-  ui->groupBox->setFixedHeight(200);
+  ui->groupBox_3->setFixedWidth(200);
+  ui->groupBox->setFixedHeight(250);
+  ui->groupBox_6->setFixedHeight(250);
   // 放大缩小设置
-  ui->groupBox_5->setFixedWidth(40);
-//  ui->groupBox_5->setStyleSheet("QGroupBox { padding: 2px; }");
-  ui->groupBox_5->setStyleSheet("QGroupBox { border: none; }");
+//  ui->groupBox_5->setFixedWidth(40);
+////  ui->groupBox_5->setStyleSheet("QGroupBox { padding: 2px; }");
+//  ui->groupBox_5->setStyleSheet("QGroupBox { border: none; }");
 
-//  ui->bringup_button->setBackgroundRole();
+  ui->bringup_button->setFixedHeight(80);
+//  ui->bringup_button->setFixedWidth(100);
+
+  ui->server_connect_Button->setFixedHeight(80);
+//  // 退出
+//  ui->pushButton->setFixedHeight(50);
+//  ui->pushButton->setFixedWidth(100);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,6 +158,14 @@ void MainWindow::connection() {
   });
   connect(ui->radioButton_2, &QRadioButton::toggled, [=](bool isChecked){
       if (isChecked == true) {}
+  });
+  // 设置激光雷达颠倒
+  connect(ui->radioButton_3, &QRadioButton::toggled, [=](bool isChecked){
+      if (isChecked == true) {
+        roboItem_->SetLaserInverted(true);
+      } else {
+        roboItem_->SetLaserInverted(false);
+      }
   });
   connect(ui->radioButton_4, &QRadioButton::toggled, [=](bool isChecked){
       if (isChecked == true) {
@@ -183,16 +213,18 @@ void MainWindow::on_bringup_button_clicked() {
   // startDetached 启动的进程不能进行通信，也不能输出重定向，但是，主线程退出后不会影响该子进程的执行
   // frontend_process_->startDetached("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
   // 启动roslaunch命令
-//  hardware_process_->start("roslaunch", QStringList() << "robot_control" << "robot_control.launch");
-//  laser_process_->start("roslaunch", QStringList() << "ydlidar_ros_driver" << "lidar.launch");
-//  // 延时1s  不然启动有问题
-//  QTime t;
-//  t.start();
-//  while(t.elapsed()<1000)//1000ms = 1s
-//        QCoreApplication::processEvents();
+// hardware_process_->start("roslaunch", QStringList() << "robot_control" << "robot_control.launch");
+// laser_process_->start("roslaunch", QStringList() << "ydlidar_ros_driver" << "lidar.launch");
+// // 延时1s  不然启动有问题
+// QTime t;
+// t.start();
+// while(t.elapsed()<1000)//1000ms = 1s
+//       QCoreApplication::processEvents();
 
-//  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
-  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend_view.launch");
+frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
+//  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend_view.launch");
+//   frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend_view.launch");
+//  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend.launch");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////

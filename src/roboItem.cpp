@@ -16,7 +16,7 @@ roboItem::roboItem() {
   set2DGoalCursor = new QCursor(QPixmap("://images/cursor_pos.png"), 0, 0);
   setRobotVis(eRobotColor::red);
   setDefaultScale();
-  laser_upside_down_ = true;   // 雷达颠倒
+  laser_upside_down_ = false;   // 雷达颠倒
   visual_mode_ = VisualMode::internal_tracking;
 }
 
@@ -36,7 +36,7 @@ void roboItem::setRobotVis(eRobotColor color) {
   QMatrix matrix;
   matrix.rotate(90);
   robotImg = robotImg.transformed(matrix, Qt::SmoothTransformation);
-  robotImg = robotImg.scaled(robotImg.width() / expansion_coef_, robotImg.height() / expansion_coef_);
+  robotImg = robotImg.scaled(robotImg.width() * 2, robotImg.height() * 2);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,10 +121,17 @@ void roboItem::paintSubGridMap(QImage map, QPointF mapOrigin, float res, int wid
   if (map_resolution_ != res * expansion_coef_) {
     map_resolution_ = res * expansion_coef_;    // 可视化的分辨率 和 实际物理分辨率 差一个 expansion_coef_的倍数
   }
-
+  // 没有颠倒的情况下原mapOrigin是图片左下角的坐标，而Qt中显示图片的原点坐标系在图片左上角，因此要进行转换
+  // 而颠倒时候，由与y反向，所以原来的mapOrigin实际就是Qt显示的坐标原点了
+  if (!laser_upside_down_) {
+    mapOrigin.setY(mapOrigin.y() + height * res);
+  }
+  // map 是激光里程计坐标系下的，要把它转换到odom系
+  transformMapFromLaserOdomToOdom(map);
   poseLaserOdomToOdom(mapOrigin);
   SubGridMapOrigin.setX(mapOrigin.x() / map_resolution_);
-  SubGridMapOrigin.setY(-mapOrigin.y() / map_resolution_);   // qt中视图坐标系y的方向和机器人坐标系相反 所以要-
+  // qt中视图坐标系y的方向和机器人坐标系相反 所以要-,
+  SubGridMapOrigin.setY(-mapOrigin.y() / map_resolution_);
   // map 是物理尺度分辨率下的图片，显示时要转换到显示尺度分辨率下
   m_imageMap = map.scaled(width / expansion_coef_, height / expansion_coef_);
 //  m_imageMap = map.scaled(100, 100, Qt::KeepAspectRatio);
@@ -144,6 +151,24 @@ void roboItem::poseLaserOdomToOdom(QPointF& pose_in_laserOdom) {
     if (laser_upside_down_) {
         pose_in_laserOdom.setY(-pose_in_laserOdom.y());
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void roboItem::transformMapFromLaserOdomToOdom(QImage& map) {
+  int width = map.width();
+  int layer_num = map.height() / 2;
+  /**
+   * @todo: 这里只考虑了颠倒，需要再加入外参
+   **/
+  if (laser_upside_down_) {
+    for (int row = 0; row < layer_num; ++row) {
+      for (int col = 0; col < width; ++col) {
+        QRgb pixel = map.pixel(col, row);
+        map.setPixel(col, row, map.pixel(col, map.height() - row - 1));
+        map.setPixel(col, map.height() - row - 1, pixel);
+      }
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,6 +287,11 @@ float roboItem::GetScale() const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::SetVisualMode(VisualMode mode) {
     visual_mode_ = mode;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void roboItem::SetLaserInverted(bool flag) {
+  laser_upside_down_ = flag;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////

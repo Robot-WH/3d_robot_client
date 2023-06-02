@@ -277,8 +277,8 @@ void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
     } else if (msg->data[i] == -1) {
       color = Qt::gray;  // gray
     }
-    // 在ROS中，y朝上，而在Qt中，y朝下，因此这里刚好把图片给颠倒了
-    map_image.setPixel(x, y, qRgb(color.red(), color.green(), color.blue()));
+    // 在ROS中，y朝上，而在Qt中，y朝下
+    map_image.setPixel(x, height - y - 1, qRgb(color.red(), color.green(), color.blue()));
   }
 //  for (int i = 0; i < 10000; i++) {
 //    int x = i % width;

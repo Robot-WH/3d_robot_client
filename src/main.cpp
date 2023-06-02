@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   //    QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL);
   MainWindow w(argc, argv);
 // w.showFullScreen();
-   w.show();
+     w.show();
 //  app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
   QObject::connect(&w, &MainWindow::Quit, &app, &QCoreApplication::quit);
   int result = app.exec();  // 程序执行  相当于不停的循环
