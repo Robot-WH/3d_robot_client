@@ -50,6 +50,12 @@ protected:
   void viewCenterFocusOnRobot();
 
 private slots:
+  void on_localgridmap_checkBox_stateChanged(int arg1);
+
+private slots:
+  void on_pushButton_reset_clicked();
+
+private slots:
   void on_pushButton_minus_clicked();
   void on_pushButton_plus_clicked();
   void on_pushButton_return_clicked();

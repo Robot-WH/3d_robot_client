@@ -15,7 +15,7 @@
 #include <ros/network.h>
 #include <ros/ros.h>
 #include <std_msgs/String.h>
-
+#include <qelapsedtimer.h>
 #include <QDebug>
 #include <sstream>
 #include <string>
@@ -90,20 +90,22 @@ void QNode::SubAndPubTopic() {
   // Add your ros communications here.
   QSettings settings("ros_qt5_gui_app", "Displays");
   // 创建速度话题的订阅者
-//  cmdVel_sub = n.subscribe<nav_msgs::Odometry>(odom_topic.toStdString(), 200,
-//                                               &QNode::speedCallback, this);
-//  battery_sub = n.subscribe(batteryState_topic.toStdString(), 1000,
-//                            &QNode::batteryCallback, this);
+  //  cmdVel_sub = n.subscribe<nav_msgs::Odometry>(odom_topic.toStdString(), 200,
+  //                                               &QNode::speedCallback, this);
+  //  battery_sub = n.subscribe(batteryState_topic.toStdString(), 1000,
+  //                            &QNode::batteryCallback, this);
   // 地图订阅
   QString occ_grid_topic = settings.value("Map/occ_grid_topic", QString("/map")).toString();
-  map_sub = n.subscribe(occ_grid_topic.toStdString(), 1000, &QNode::mapCallback, this);
+  map_sub = n.subscribe(occ_grid_topic.toStdString(), 1000, &QNode::gridmapCallback, this);
   // 速度控制话题
-//  cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+  //  cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+  // 重置设置话题
+  reset_pub = n.advertise<std_msgs::Bool>("cmd_reset", 1);
   // 激光雷达点云话题订阅
   stable_laser_point_topic = settings.value("Laser/stable_laser_point", QString("/stable_laser_points")).toString();
   stable_laser_point_sub_ = n.subscribe(stable_laser_point_topic.toStdString(), 1000,
                            &QNode::stableLaserPointCallback, this);
-//  qDebug() << "stable_laser_point_topic: " << stable_laser_point_topic;
+  //  qDebug() << "stable_laser_point_topic: " << stable_laser_point_topic;
 
   dynamic_laser_point_topic = settings.value("Laser/dynamic_laser_point_topic", QString("/dynamic_laser_points")).toString();
   dynamic_laser_point_sub_ = n.subscribe(dynamic_laser_point_topic.toStdString(), 1000,
@@ -255,10 +257,33 @@ void QNode::set_goal(QString frame, double x, double y, double z, double w) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief QNode::mapCallback 地图信息订阅回调函数
+void QNode::SetReset() {
+  std_msgs::Bool flag;
+  flag.data = true;
+  reset_pub.publish(flag);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::SetGridMapShowFlag(bool flag) {
+  gridmap_show_flag = flag;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::gridmapCallback 地图信息订阅回调函数
 /// \param msg
 ///
-void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
+void QNode::gridmapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
+  static bool first_flag = true;
+
+  if (!gridmap_show_flag) {
+    if (!first_flag) {
+      return;
+    }
+  }
+
+  // qDebug() << "gridmapCallback";
+  // QElapsedTimer mstimer;
+  // mstimer.start();
   int width = msg->info.width;
   int height = msg->info.height;
 //  int width = 100;
@@ -305,6 +330,10 @@ void QNode::mapCallback(nav_msgs::OccupancyGrid::ConstPtr msg) {
   m_mapResolution = msg->info.resolution;
 
   emit updateSubGridMap(map_image, mapOrigin, m_mapResolution, width, height);
+
+  // float time =(double)mstimer.nsecsElapsed()/(double)1000000;
+  // qDebug() <<"gridmapCallback time= " <<time<<"ms";// 输出运行时间（ms）
+  first_flag = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -478,6 +507,7 @@ QPointF QNode::transWordPoint2Scene(QPointF pose) {
 //     return;
 //   }
 // }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 QImage QNode::rotateMapWithY(QImage map) {
   QImage res = map;
@@ -532,6 +562,7 @@ QImage QNode::Mat2QImage(cv::Mat const& src) {
   return dest;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 //cv::Mat QNode::QImage2Mat(QImage& image) {
 //  cv::Mat mat;
 //  switch (image.format()) {

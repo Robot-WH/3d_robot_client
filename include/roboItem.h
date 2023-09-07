@@ -20,7 +20,6 @@ enum eRobotColor { blue, red, yellow };
 
 class roboItem : public QObject, public QGraphicsItem {
   Q_OBJECT
-
  public:
   enum class VisualMode {translate_tracking, internal_tracking, driver};
   roboItem();
@@ -39,6 +38,7 @@ class roboItem : public QObject, public QGraphicsItem {
   void setRobotVis(eRobotColor color);
   void SetLaserInverted(bool flag);
   void setRobotSize(QSize size);
+  void SetGridMapShow(bool flag);
   void ChangeScale(bool type, const QPointF& center);
   QPolygon MapPoints;
   QPolygonF plannerPath;
@@ -83,7 +83,7 @@ class roboItem : public QObject, public QGraphicsItem {
   void slot_setMoveCamera();
 
  private:
-  void drawMap(QPainter *painter);
+  void drawGridMap(QPainter *painter);
   void drawRoboPos(QPainter *painter);
   void drawLaserScan(QPainter *painter);
   void drawPlannerPath(QPainter *painter);
@@ -95,13 +95,14 @@ class roboItem : public QObject, public QGraphicsItem {
   int m_zoomState;
   bool m_isMousePress{false};
   bool laser_upside_down_;   // 雷达颠倒
+  bool show_gridmap_flag = false;
   QPixmap robotImg;
   QPointF m_startPose;
   QPointF m_endPose;
   qreal m_scaleValue = 0.2;
   qreal m_scaleMin = 0.01;
   float map_resolution_ = 0.05;    // 地图局部分辨率
-  float expansion_coef_ = 0.1;     // 地图分辨率的放大系数
+  float expansion_coef_ = 0.2;     // 地图分辨率的放大系数
 };
 }  // namespace ros_qt5_gui_app
 #endif  // roboItem_H

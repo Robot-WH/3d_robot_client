@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1191</width>
-    <height>656</height>
+    <width>1180</width>
+    <height>711</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <property name="autoFillBackground">
    <bool>false</bool>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_10">
+  <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
@@ -107,16 +107,117 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_7">
               <item>
-               <widget class="QPushButton" name="bringup_button">
-                <property name="font">
-                 <font>
-                  <pointsize>20</pointsize>
-                  <bold>true</bold>
-                 </font>
+               <layout class="QGridLayout" name="gridLayout_2">
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_2">
+                  <property name="text">
+                   <string>端口</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>IP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="2">
+                 <widget class="QPushButton" name="pushButton_3">
+                  <property name="text">
+                   <string>保存</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QPushButton" name="bringup_button">
+                  <property name="font">
+                   <font>
+                    <pointsize>15</pointsize>
+                    <bold>true</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>运行</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="1">
+                 <widget class="QPushButton" name="pushButton_reset">
+                  <property name="text">
+                   <string>重置</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1" colspan="2">
+                 <widget class="QLineEdit" name="line_ip_Edit">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                    <bold>false</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>192.168.0.101</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLineEdit" name="line_port_Edit">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                    <bold>false</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>8080</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="server_connect_Button">
+                  <property name="font">
+                   <font>
+                    <pointsize>20</pointsize>
+                    <bold>true</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>连接</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="groupBox_10">
+                <property name="title">
+                 <string>任务</string>
                 </property>
-                <property name="text">
-                 <string>运行</string>
-                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_10">
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_5">
+                   <property name="text">
+                    <string>自主探索</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_6">
+                   <property name="text">
+                    <string>自主全覆盖巡逻</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_7">
+                   <property name="text">
+                    <string>定点巡逻</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
@@ -206,7 +307,7 @@
                     <widget class="QRadioButton" name="radioButton">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -225,7 +326,7 @@
                     <widget class="QRadioButton" name="radioButton_4">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -238,7 +339,7 @@
                     <widget class="QRadioButton" name="radioButton_2">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -246,6 +347,19 @@
                       <string>驾驶员</string>
                      </property>
                     </widget>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
                    </item>
                   </layout>
                  </widget>
@@ -260,12 +374,15 @@
                     <widget class="QCheckBox" name="checkBox_2">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
                      <property name="text">
                       <string>局部点云子图</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
                      </property>
                     </widget>
                    </item>
@@ -273,7 +390,7 @@
                     <widget class="QCheckBox" name="checkBox_4">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -283,15 +400,18 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox">
+                    <widget class="QCheckBox" name="localgridmap_checkBox">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
                      <property name="text">
                       <string>局部栅格子图</string>
+                     </property>
+                     <property name="checked">
+                      <bool>false</bool>
                      </property>
                     </widget>
                    </item>
@@ -299,7 +419,7 @@
                     <widget class="QCheckBox" name="checkBox_5">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -312,7 +432,7 @@
                     <widget class="QCheckBox" name="checkBox_3">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -325,7 +445,7 @@
                     <widget class="QCheckBox" name="checkBox_6">
                      <property name="font">
                       <font>
-                       <pointsize>15</pointsize>
+                       <pointsize>12</pointsize>
                        <bold>true</bold>
                       </font>
                      </property>
@@ -333,6 +453,19 @@
                       <string>关键帧</string>
                      </property>
                     </widget>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer_2">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
                    </item>
                   </layout>
                  </widget>
@@ -350,83 +483,23 @@
           </attribute>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QGroupBox" name="groupBox">
-             <property name="title">
-              <string>服务器</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_6">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_2">
-                <item>
-                 <widget class="QLabel" name="label_2">
-                  <property name="text">
-                   <string>端口</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="line_port_Edit">
-                  <property name="font">
-                   <font>
-                    <pointsize>12</pointsize>
-                    <bold>false</bold>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>8080</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout">
-                <item>
-                 <widget class="QLabel" name="label">
-                  <property name="text">
-                   <string>IP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="line_ip_Edit">
-                  <property name="font">
-                   <font>
-                    <pointsize>12</pointsize>
-                    <bold>false</bold>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>192.168.0.101</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QPushButton" name="server_connect_Button">
-                <property name="font">
-                 <font>
-                  <pointsize>20</pointsize>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>连接</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
             <widget class="QGroupBox" name="groupBox_5">
              <property name="title">
               <string>系统</string>
              </property>
+             <widget class="QCheckBox" name="checkBox_7">
+              <property name="geometry">
+               <rect>
+                <x>740</x>
+                <y>80</y>
+                <width>82</width>
+                <height>24</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string>CheckBox</string>
+              </property>
+             </widget>
             </widget>
            </item>
            <item>

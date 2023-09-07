@@ -2,6 +2,12 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QNetworkInterface>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "MainWindow.h"
 #include "ui_MainWindow.h"    // build/my_gui下 
 
@@ -91,11 +97,11 @@ void MainWindow::initUI() {
 //  qDebug() << "sceneCenter w:" << sceneCenter.x() << ", h: " << sceneCenter.y();
   // 视图内   显示内容UI设置
   QString styleSheet = "QCheckBox::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
-        QCheckBox{font-size: 22px;color: rgb(0, 191, 255);}\
-        QCheckBox::checked{color:rgb(0, 191, 255);}\
+        QCheckBox{font-size: 18px;color: rgb(0, 191, 255);}\
+        QCheckBox::checked{color:rgb(50,205,50);}\
         QCheckBox::unchecked{color:rgb(119, 136, 153);}\
         ";
-  ui->checkBox->setStyleSheet(styleSheet);
+  ui->localgridmap_checkBox->setStyleSheet(styleSheet);
   ui->checkBox_2->setStyleSheet(styleSheet);
   ui->checkBox_3->setStyleSheet(styleSheet);
   ui->checkBox_4->setStyleSheet(styleSheet);
@@ -103,8 +109,8 @@ void MainWindow::initUI() {
   ui->checkBox_6->setStyleSheet(styleSheet);
   // 视图内   视角选择UI设置
   styleSheet = "QRadioButton::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
-      QRadioButton{font-size: 22px;color: rgb(0, 191, 255);}\
-      QRadioButton::checked{color:rgb(0, 191, 255);}\
+      QRadioButton{font-size: 18px;color: rgb(0, 191, 255);}\
+      QRadioButton::checked{color:rgb(50,205,50);}\
       QRadioButton::unchecked{color:rgb(119, 136, 153);}\
       ";
   ui->radioButton->setStyleSheet(styleSheet);
@@ -113,17 +119,14 @@ void MainWindow::initUI() {
   ui->radioButton_4->setChecked(true);
 
   ui->groupBox_3->setFixedWidth(200);
-  ui->groupBox->setFixedHeight(250);
   ui->groupBox_6->setFixedHeight(250);
   // 放大缩小设置
 //  ui->groupBox_5->setFixedWidth(40);
 ////  ui->groupBox_5->setStyleSheet("QGroupBox { padding: 2px; }");
 //  ui->groupBox_5->setStyleSheet("QGroupBox { border: none; }");
 
-  ui->bringup_button->setFixedHeight(80);
-//  ui->bringup_button->setFixedWidth(100);
-
-  ui->server_connect_Button->setFixedHeight(80);
+  ui->server_connect_Button->setFixedHeight(60);
+  ui->server_connect_Button->setFixedWidth(60);
 //  // 退出
 //  ui->pushButton->setFixedHeight(50);
 //  ui->pushButton->setFixedWidth(100);
@@ -212,7 +215,7 @@ void MainWindow::bringUpQtRosNode() {
 void MainWindow::on_bringup_button_clicked() {
   // startDetached 启动的进程不能进行通信，也不能输出重定向，但是，主线程退出后不会影响该子进程的执行
   // frontend_process_->startDetached("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
-  // 启动roslaunch命令
+  //   启动roslaunch命令
 // hardware_process_->start("roslaunch", QStringList() << "robot_control" << "robot_control.launch");
 // laser_process_->start("roslaunch", QStringList() << "ydlidar_ros_driver" << "lidar.launch");
 // // 延时1s  不然启动有问题
@@ -221,9 +224,9 @@ void MainWindow::on_bringup_button_clicked() {
 // while(t.elapsed()<1000)//1000ms = 1s
 //       QCoreApplication::processEvents();
 
-frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
+//frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
 //  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend_view.launch");
-//   frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend_view.launch");
+   frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend_view.launch");
 //  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend.launch");
 }
 
@@ -243,7 +246,27 @@ QString MainWindow::getLocalIpAddress() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::on_server_connect_Button_clicked() {
-    QMessageBox::information(nullptr, "提示", "暂时无法连接服务器");
+    QString ip = ui->line_ip_Edit->text();
+    QString port = ui->line_port_Edit->text();
+    qDebug() << "ip: " << ip;
+    qDebug() << "port: " << port;
+    // 1、建立socket
+    // PF_INET: IPv4, SOCK_STREAM: TCP
+    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    assert(sockfd >= 0);
+    // 2、socket绑定
+    struct sockaddr_in address;
+    std::memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;   // ipv4
+    inet_pton(AF_INET, ip.toStdString().c_str(), &address.sin_addr);
+    address.sin_port = htons(8080);
+    // 连接服务器
+    if (::connect(sockfd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+        QMessageBox::information(nullptr, "提示", "连接服务器失败");
+    } else {
+        QMessageBox::information(nullptr, "提示", "连接服务器成功！");
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -328,5 +351,21 @@ void MainWindow::on_pushButton_minus_clicked() {
   roboItem_->ChangeScale(0, roboItem_->GetScale() * itemPoint);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void MainWindow::on_pushButton_reset_clicked() {
+  qt_ros_node_.SetReset();
+}
 
+
+void MainWindow::on_localgridmap_checkBox_stateChanged(int arg1) {
+    if (arg1) {
+//      qDebug() << "localgridmap on";
+       qt_ros_node_.SetGridMapShowFlag(true);
+       roboItem_->SetGridMapShow(true);
+    } else {
+//      qDebug() << "localgridmap off";
+      qt_ros_node_.SetGridMapShowFlag(false);
+      roboItem_->SetGridMapShow(false);
+    }
+}
 

@@ -38,6 +38,7 @@
 #include <sensor_msgs/image_encodings.h>  //图像编码格式
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Bool.h>
 #include <tf/transform_listener.h>
 
 #include <QDebug>
@@ -73,6 +74,8 @@ class QNode : public QThread {
   bool init(const std::string &master_url, const std::string &host_url);
   void move_base(char k, float speed_linear, float speed_trun);
   void set_goal(QString frame, double x, double y, double z, double w);
+  void SetReset();
+  void SetGridMapShowFlag(bool flag);
   // void SubImage(QString topic, int frame_id);
 //  void pub_imageMap(QImage map);
   QPointF transScenePoint2Word(QPointF pos);
@@ -124,6 +127,7 @@ class QNode : public QThread {
   ros::Subscriber m_compressedImgSub1;
   ros::Publisher goal_pub;
   ros::Publisher cmd_pub;
+  ros::Publisher reset_pub;
   ros::Publisher m_initialposePub;
 //  image_transport::Publisher m_imageMapPub;
   MoveBaseClient *movebase_client;
@@ -159,6 +163,8 @@ class QNode : public QThread {
   float m_mapResolution;
   //地图是否被初始化
   bool m_bMapIsInit = false;
+  // gird map是否显示
+  bool gridmap_show_flag = false;
   // tf::TransformListener m_tfListener(ros::Duration(10));
   // ros::Timer m_rosTimer;
   QImage Mat2QImage(cv::Mat const &src);
@@ -174,7 +180,7 @@ class QNode : public QThread {
   // void imageCallback0(const sensor_msgs::CompressedImageConstPtr &msg);
   // void imageCallback1(const sensor_msgs::CompressedImageConstPtr &msg);
   void myCallback(const std_msgs::Float64 &message_holder);
-  void mapCallback(nav_msgs::OccupancyGrid::ConstPtr map);
+  void gridmapCallback(nav_msgs::OccupancyGrid::ConstPtr map);
 //  void stableLaserPointCallback(sensor_msgs::LaserScanConstPtr scan);
 //  void dynamicLaserPointCallback(sensor_msgs::LaserScanConstPtr scan);
   void stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);

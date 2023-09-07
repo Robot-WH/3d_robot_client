@@ -1,6 +1,7 @@
 #include "roboItem.h"
 #include "ui_MainWindow.h"    // build/my_gui下
 #include <QDebug>
+#include <qelapsedtimer.h>
 #include <iostream>
 #include <iomanip>
 namespace ros_qt {
@@ -36,7 +37,7 @@ void roboItem::setRobotVis(eRobotColor color) {
   QMatrix matrix;
   matrix.rotate(90);
   robotImg = robotImg.transformed(matrix, Qt::SmoothTransformation);
-  robotImg = robotImg.scaled(robotImg.width() * 2, robotImg.height() * 2);
+  robotImg = robotImg.scaled(robotImg.width() * 4, robotImg.height() * 4);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,12 +130,19 @@ void roboItem::paintSubGridMap(QImage map, QPointF mapOrigin, float res, int wid
   // map 是激光里程计坐标系下的，要把它转换到odom系
   transformMapFromLaserOdomToOdom(map);
   poseLaserOdomToOdom(mapOrigin);
+  // 注意，下面这个map_resolution_分辨率不是原始slam算法里的分辨率，
+  // 而是qt显示时的可视化分辨率，在上面进行了转换 
   SubGridMapOrigin.setX(mapOrigin.x() / map_resolution_);
   // qt中视图坐标系y的方向和机器人坐标系相反 所以要-,
   SubGridMapOrigin.setY(-mapOrigin.y() / map_resolution_);
+  // if (flag) return;  
+  QElapsedTimer mstimer;
+  mstimer.start();
   // map 是物理尺度分辨率下的图片，显示时要转换到显示尺度分辨率下
+  // 这个函数耗时巨大，当expansion_coef_ = 0.1 时，耗时接近200ms,将造成卡顿
   m_imageMap = map.scaled(width / expansion_coef_, height / expansion_coef_);
-//  m_imageMap = map.scaled(100, 100, Qt::KeepAspectRatio);
+  float time =(double)mstimer.nsecsElapsed()/(double)1000000;
+  qDebug() <<"map.scaled time= " <<time<<"ms";// 输出运行时间（ms）
   update();
 }
 
@@ -182,11 +190,17 @@ void roboItem::paintRoboPos(RobotPose pos) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                                           QWidget *widget) {
-    drawMap(painter);
+//    QElapsedTimer mstimer;
+//    mstimer.start();
+    if (show_gridmap_flag) {
+      drawGridMap(painter);
+    }
     drawRoboPos(painter);
   //  drawPlannerPath(painter);
     drawLaserScan(painter);
   //  drawTools(painter);
+//      float time =(double)mstimer.nsecsElapsed()/(double)1000000;
+//      qDebug() <<"paint time= " <<time<<"ms";// 输出运行时间（ms）
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -226,11 +240,17 @@ void roboItem::drawTools(QPainter *painter) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-void roboItem::drawMap(QPainter* painter) {
+void roboItem::drawGridMap(QPainter* painter) {
   // 这个sb drawImage()函数绘制图片时的原点坐标只能是整型，
   // 例如 painter->drawImage(17.6, 15.4, m_imageMap), 那么实际上绘图的原点坐标是(17, 15)
   // 这也是为什么可视化分辨率相比物理分辨率要进行膨胀的原因
+//  QElapsedTimer mstimer;
+//  mstimer.start();
+// drawImage绘图时的原点坐标只能是整数，比如地图的原点应该是(18.6, 17.4)那么实际绘图后
+// 的原点是(18，17),因此最终显示的图片会有一个偏差 
   painter->drawImage(SubGridMapOrigin.x(), SubGridMapOrigin.y(), m_imageMap);
+//  float time =(double)mstimer.nsecsElapsed()/(double)1000000;
+//  qDebug() <<"drawGridMap time= " <<time<<"ms";// 输出运行时间（ms）
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,7 +278,7 @@ void roboItem::drawRoboPos(QPainter *painter) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-void roboItem::drawLaserScan(QPainter *painter) {
+void roboItem::drawLaserScan(QPainter* painter) {
   //绘制laser
   painter->setPen(QPen(QColor(0, 255, 0, 255), 1 / expansion_coef_));
   painter->drawPoints(stableLaserPoints);
@@ -311,6 +331,11 @@ void roboItem::setDefaultScale() {
   m_scaleValue = 0.2;
   this->setScale(m_scaleValue);
 //  this->moveBy(0, 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void roboItem::SetGridMapShow(bool flag) {
+  show_gridmap_flag = flag;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
