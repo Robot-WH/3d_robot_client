@@ -331,7 +331,7 @@ void QNode::SetGridMapShowFlag(bool flag) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-void QNode::SetOpenGLWidget(PointCloudOpenGLWidget *openGLWidget) {
+void QNode::SetOpenGLWidget(RobotVizOpenGLWidget *openGLWidget) {
   openGLWidget_ = openGLWidget;
 }
 

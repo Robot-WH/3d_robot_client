@@ -9,16 +9,16 @@
 #include <mutex>
 
 /**
- * @brief The PointCloudOpenGLWidget class
+ * @brief The RobotVizOpenGLWidget class
  * QOpenGLWidget代替GLFW， QOpenGLFunctions_X_X_Core代替GLAD
  * QOpenGLFunctions_X_X_Core提供OpenGL X.X版本核心模式的所有功能。是对OpenGL函数的封装
  */
-class PointCloudOpenGLWidget : public QOpenGLWidget, public QOpenGLFunctions_3_3_Core
+class RobotVizOpenGLWidget : public QOpenGLWidget, public QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 public:
-    PointCloudOpenGLWidget(QWidget *parent = 0);
-    ~PointCloudOpenGLWidget();
+    RobotVizOpenGLWidget(QWidget *parent = 0);
+    ~RobotVizOpenGLWidget();
     void updatePoints(const QVector<QVector3D> &points);
     void SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr map);
     void SetLidarStablePoint(sensor_msgs::PointCloud2ConstPtr points);

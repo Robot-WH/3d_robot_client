@@ -60,7 +60,7 @@
 #include "ros_service/SaveTraj.h"
 #include "ros_service/SetTraj.h"
 #include "ros_service/SetCommand.h"
-#include "PointCloudOpenGLWidget.h"
+#include "robotVizOpenGLWidget.h"
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>
     MoveBaseClient;
@@ -93,7 +93,7 @@ class QNode : public QThread {
   void saveTrajCall(const QString& traj_name, std::vector<uint16_t>& traj_id);
   void setTrajCall(const uint16_t& traj_id, uint8_t& success);
   void setWorkModeCall(const uint16_t& cmd, uint8_t& success);
-  void SetOpenGLWidget(PointCloudOpenGLWidget *openGLWidget);
+  void SetOpenGLWidget(RobotVizOpenGLWidget *openGLWidget);
   QPointF transScenePoint2Word(QPointF pos);
   QPointF transWordPoint2Scene(QPointF pos);
   QMap<QString, QString> get_topic_list();
@@ -206,7 +206,7 @@ class QNode : public QThread {
   tf::TransformListener *m_Laserlistener;
   std::string base_frame, laser_frame, map_frame;
   std::vector<std::string> workspace;
-  PointCloudOpenGLWidget *openGLWidget_;
+  RobotVizOpenGLWidget *openGLWidget_;
 
  private:
   void speedCallback(const nav_msgs::Odometry::ConstPtr &msg);

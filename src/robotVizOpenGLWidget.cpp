@@ -1,4 +1,4 @@
-#include "PointCloudOpenGLWidget.h"
+#include "robotVizOpenGLWidget.h"
 #include <QDebug>
 #include <iostream>
 #include <pcl/point_cloud.h>
@@ -8,7 +8,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <Eigen/Dense>
 
-PointCloudOpenGLWidget::PointCloudOpenGLWidget(QWidget *parent)
+RobotVizOpenGLWidget::RobotVizOpenGLWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     m_xRotate = -30.0;
@@ -21,7 +21,7 @@ PointCloudOpenGLWidget::PointCloudOpenGLWidget(QWidget *parent)
     odom_to_map_.setToIdentity();
 }
 
-PointCloudOpenGLWidget::~PointCloudOpenGLWidget()
+RobotVizOpenGLWidget::~RobotVizOpenGLWidget()
 {
     makeCurrent();  // 这个函数调用通常用于将OpenGL上下文（context）设置为当前线程的上下文
     glDeleteBuffers(1, &m_VBO_MeshLine);
@@ -46,10 +46,10 @@ PointCloudOpenGLWidget::~PointCloudOpenGLWidget()
 }
 
 /**
- * @brief PointCloudOpenGLWidget::SetGlobalLidarMap
+ * @brief RobotVizOpenGLWidget::SetGlobalLidarMap
  * @param map
  */
-void PointCloudOpenGLWidget::SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr map) {
+void RobotVizOpenGLWidget::SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr map) {
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::fromROSMsg(*map, cloud);
   globalMapPointData.clear();
@@ -69,10 +69,10 @@ void PointCloudOpenGLWidget::SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr 
 }
 
 /**
- * @brief PointCloudOpenGLWidget::SetGlobalLidarMap
+ * @brief RobotVizOpenGLWidget::SetGlobalLidarMap
  * @param map
  */
-void PointCloudOpenGLWidget::SetLidarStablePoint(sensor_msgs::PointCloud2ConstPtr points) {
+void RobotVizOpenGLWidget::SetLidarStablePoint(sensor_msgs::PointCloud2ConstPtr points) {
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::fromROSMsg(*points, cloud);
   m_lidarStablePointData.clear();
@@ -92,10 +92,10 @@ void PointCloudOpenGLWidget::SetLidarStablePoint(sensor_msgs::PointCloud2ConstPt
 }
 
 /**
- * @brief PointCloudOpenGLWidget::SetRoboPose
+ * @brief RobotVizOpenGLWidget::SetRoboPose
  * @param pose
  */
-void PointCloudOpenGLWidget::SetRoboPose(const QMatrix4x4& pose) {
+void RobotVizOpenGLWidget::SetRoboPose(const QMatrix4x4& pose) {
   // qDebug() << "SetRoboPose";
   odom_to_map_mt_.lock();
   roboPose_in_map_ = odom_to_map_ * pose;
@@ -103,17 +103,17 @@ void PointCloudOpenGLWidget::SetRoboPose(const QMatrix4x4& pose) {
   update();
 }
 
-void PointCloudOpenGLWidget::SetOdomToMapTrans(const QMatrix4x4& pose) {
+void RobotVizOpenGLWidget::SetOdomToMapTrans(const QMatrix4x4& pose) {
   odom_to_map_mt_.lock();
   odom_to_map_ = pose;
   odom_to_map_mt_.unlock();
 }
 
 /**
- * @brief PointCloudOpenGLWidget::updatePoints
+ * @brief RobotVizOpenGLWidget::updatePoints
  * @param points
  */
-void PointCloudOpenGLWidget::updatePoints(const QVector<QVector3D> &points)
+void RobotVizOpenGLWidget::updatePoints(const QVector<QVector3D> &points)
 {
     m_lidarStablePointData.clear();
     for(auto vector3D : points)
@@ -127,10 +127,10 @@ void PointCloudOpenGLWidget::updatePoints(const QVector<QVector3D> &points)
 
 
 /**
- * @brief PointCloudOpenGLWidget::initializeGL
+ * @brief RobotVizOpenGLWidget::initializeGL
  * initializeGL()函数在OpenGL渲染环境或窗口被初始化时调用一次，用于设置一些基本的渲染参数和加载着色器程序
  */
-void PointCloudOpenGLWidget::initializeGL()
+void RobotVizOpenGLWidget::initializeGL()
 {
      // 这行代码用于初始化Qt提供的OpenGL函数。
     // 这通常是必要的，以确保Qt的OpenGL包装器能够正确调用底层的OpenGL函数
@@ -177,10 +177,10 @@ void PointCloudOpenGLWidget::initializeGL()
 }
 
 /**
- * @brief PointCloudOpenGLWidget::paintGL
+ * @brief RobotVizOpenGLWidget::paintGL
  * 渲染OpenGL场景。每当需要重绘更新时自动调用
  */
-void PointCloudOpenGLWidget::paintGL()
+void RobotVizOpenGLWidget::paintGL()
 {
     // qDebug() << "paintGL";
     // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -267,24 +267,24 @@ void PointCloudOpenGLWidget::paintGL()
 }
 
 /**
- * @brief PointCloudOpenGLWidget::resizeGL
+ * @brief RobotVizOpenGLWidget::resizeGL
  * 设置OpenGL视区、投影等。每当小部件调整了大小时都会调用该视区
  * （并且当它第一次显示时也会调用，因为所有新创建的小部件都会自动获得一个调整大小的事件）
  * @param width
  * @param height
  */
-void PointCloudOpenGLWidget::resizeGL(int width, int height)
+void RobotVizOpenGLWidget::resizeGL(int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-void PointCloudOpenGLWidget::mousePressEvent(QMouseEvent *event)
+void RobotVizOpenGLWidget::mousePressEvent(QMouseEvent *event)
 {
     lastPos = event->pos();
     last_angle = std::atan2(lastPos.y() - 500, lastPos.x() - 500);
 }
 
-void PointCloudOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
+void RobotVizOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
     int dx = event->pos().x() - lastPos.x();
     int dy = event->pos().y() - lastPos.y();
@@ -324,7 +324,7 @@ void PointCloudOpenGLWidget::mouseMoveEvent(QMouseEvent *event)
     lastPos = event->pos();
 }
 
-void PointCloudOpenGLWidget::wheelEvent(QWheelEvent *event)
+void RobotVizOpenGLWidget::wheelEvent(QWheelEvent *event)
 {
     auto scroll_offest = event->angleDelta().y() / 120;
     // m_zoom = m_zoom - (float)scroll_offest;
@@ -352,7 +352,7 @@ void PointCloudOpenGLWidget::wheelEvent(QWheelEvent *event)
     update();
 }
 
-unsigned int PointCloudOpenGLWidget::drawMeshline(float size, int count)
+unsigned int RobotVizOpenGLWidget::drawMeshline(float size, int count)
 {
     std::vector<float> mesh_vertexs;
     unsigned int vertex_count = 0;
@@ -401,7 +401,7 @@ unsigned int PointCloudOpenGLWidget::drawMeshline(float size, int count)
     return vertex_count;
 }
 
-void PointCloudOpenGLWidget::drawCooraxis(float length)
+void RobotVizOpenGLWidget::drawCooraxis(float length)
 {
     std::vector<float> axis_vertexs =
     {
@@ -434,13 +434,13 @@ void PointCloudOpenGLWidget::drawCooraxis(float length)
 }
 
 /**
- * @brief PointCloudOpenGLWidget::drawPointdata
+ * @brief RobotVizOpenGLWidget::drawPointdata
  *  这个函数接收一个std::vector<float>类型的引用pointVertexs，这个向量预计包含了点云数据的顶点信息（每个点可能是由位置坐标和颜色信息组成的）。
  *   函数返回一个unsigned int类型的值，表示点的数量
  * @param pointVertexs
  * @return
  */
-unsigned int PointCloudOpenGLWidget::drawLidarStablePointdata()
+unsigned int RobotVizOpenGLWidget::drawLidarStablePointdata()
 {
     /************************************** 生成顶点数组对象 (VAO) *********************************/
     // 使用 VAO 的主要好处是性能，可以将每个物体的顶点属性设置存储在一个 VAO 中，
@@ -487,10 +487,10 @@ unsigned int PointCloudOpenGLWidget::drawLidarStablePointdata()
 }
 
 /**
- * @brief PointCloudOpenGLWidget::drawGlobalLidarMapData
+ * @brief RobotVizOpenGLWidget::drawGlobalLidarMapData
  * @return
  */
-unsigned int PointCloudOpenGLWidget::drawGlobalLidarMapData()
+unsigned int RobotVizOpenGLWidget::drawGlobalLidarMapData()
 {
     glGenVertexArrays(1, &m_VAO_GlobalLidarMap);
     glBindVertexArray(m_VAO_GlobalLidarMap);

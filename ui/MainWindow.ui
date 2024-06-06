@@ -833,7 +833,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
-            <widget class="PointCloudOpenGLWidget" name="openGLWidget"/>
+            <widget class="RobotVizOpenGLWidget" name="openGLWidget"/>
            </item>
           </layout>
          </item>
@@ -978,9 +978,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>PointCloudOpenGLWidget</class>
+   <class>RobotVizOpenGLWidget</class>
    <extends>QOpenGLWidget</extends>
-   <header>PointCloudOpenGLWidget.h</header>
+   <header location="global">robotVizOpenGLWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
