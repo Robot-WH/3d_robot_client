@@ -145,6 +145,7 @@ class QNode : public QThread {
   ros::Subscriber m_compressedImgSub0_;
   ros::Subscriber m_compressedImgSub1;
   ros::Subscriber global_lidar_map_sub_;
+  ros::Subscriber lidar_stablePoint_sub_;
   ros::Subscriber roboOdomPos_sub_;
   ros::Subscriber odom_to_map_sub_;
   // 信息交互
@@ -219,6 +220,7 @@ class QNode : public QThread {
   void stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
   void dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
   void globalLidarMapCallback(sensor_msgs::PointCloud2ConstPtr map);
+  void lidarStablePointCallback(sensor_msgs::PointCloud2ConstPtr scan);
   void plannerPathCallback(nav_msgs::Path::ConstPtr path);
   void roboOdomPosCallback(nav_msgs::Odometry msg);
   void odomToMapCallback(nav_msgs::Odometry msg);

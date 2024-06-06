@@ -38,7 +38,7 @@ PointCloudOpenGLWidget::~PointCloudOpenGLWidget()
     // 释放着色器
     m_shaderProgramMesh.release();
     m_shaderProgramAxis.release();
-    // m_shaderProgramPoint.release();
+    // m_shaderProgramLidarStablePoint.release();
     m_shaderProgramGlobalLidarMap.release();
 
     doneCurrent();
@@ -69,11 +69,34 @@ void PointCloudOpenGLWidget::SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr 
 }
 
 /**
+ * @brief PointCloudOpenGLWidget::SetGlobalLidarMap
+ * @param map
+ */
+void PointCloudOpenGLWidget::SetLidarStablePoint(sensor_msgs::PointCloud2ConstPtr points) {
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(*points, cloud);
+  m_lidarStablePointData.clear();
+  m_lidarStablePointData.reserve(cloud.size() * 4);
+  // qDebug() << "cloud.size()" << cloud.size();
+
+  for(const auto& point : cloud)
+  {
+      m_lidarStablePointData.push_back(point.x);
+      m_lidarStablePointData.push_back(point.y);
+      m_lidarStablePointData.push_back(point.z);
+      m_lidarStablePointData.push_back(1);
+  }
+
+  m_lidarStablePointCount = static_cast<GLsizei>(m_lidarStablePointData.size() / 4);
+  update();
+}
+
+/**
  * @brief PointCloudOpenGLWidget::SetRoboPose
  * @param pose
  */
 void PointCloudOpenGLWidget::SetRoboPose(const QMatrix4x4& pose) {
-  qDebug() << "SetRoboPose";
+  // qDebug() << "SetRoboPose";
   odom_to_map_mt_.lock();
   roboPose_in_map_ = odom_to_map_ * pose;
   odom_to_map_mt_.unlock();
@@ -92,13 +115,13 @@ void PointCloudOpenGLWidget::SetOdomToMapTrans(const QMatrix4x4& pose) {
  */
 void PointCloudOpenGLWidget::updatePoints(const QVector<QVector3D> &points)
 {
-    m_pointData.clear();
+    m_lidarStablePointData.clear();
     for(auto vector3D : points)
     {
-        m_pointData.push_back(vector3D.x());
-        m_pointData.push_back(vector3D.y());
-        m_pointData.push_back(vector3D.z());
-        m_pointData.push_back(1);
+        m_lidarStablePointData.push_back(vector3D.x());
+        m_lidarStablePointData.push_back(vector3D.y());
+        m_lidarStablePointData.push_back(vector3D.z());
+        m_lidarStablePointData.push_back(1);
     }
 }
 
@@ -134,21 +157,21 @@ void PointCloudOpenGLWidget::initializeGL()
     m_shaderProgramAxis.link();
 
     // link pointcloud shaders
-    m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
-            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.vs");
-    m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Fragment,      // 设置片段着色器
-            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.fs");
-    m_shaderProgramPoint.link();
+    m_shaderProgramLidarStablePoint.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_lidarStablePoint.vs");
+    m_shaderProgramLidarStablePoint.addShaderFromSourceFile(QOpenGLShader::Fragment,      // 设置片段着色器
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_lidarStablePoint.fs");
+    m_shaderProgramLidarStablePoint.link();
 
     m_shaderProgramGlobalLidarMap.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
-            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.vs");
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_globalMapPoint.vs");
     m_shaderProgramGlobalLidarMap.addShaderFromSourceFile(QOpenGLShader::Fragment,      // 设置片段着色器
-            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.fs");
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_globalMapPoint.fs");
     m_shaderProgramGlobalLidarMap.link();
 
     // m_vertexCount = drawMeshline(2.0, 16);
-    m_pointCount = drawPointdata(m_pointData);
-    // qDebug() << "point_count" << m_pointCount;
+    m_lidarStablePointCount = drawLidarStablePointdata();
+    // qDebug() << "point_count" << m_lidarStablePointCount;
     m_globalLidarMapCount = drawGlobalLidarMapData();
     drawCooraxis(1.0);
 }
@@ -160,7 +183,8 @@ void PointCloudOpenGLWidget::initializeGL()
 void PointCloudOpenGLWidget::paintGL()
 {
     // qDebug() << "paintGL";
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     /*
        为了将坐标从一个坐标系转换到另一个坐标系，需要用到几个转换矩阵，
@@ -197,10 +221,10 @@ void PointCloudOpenGLWidget::paintGL()
     m_shaderProgramAxis.setUniformValue("view", view);
     m_shaderProgramAxis.setUniformValue("model", roboPose_in_map_);
 
-    m_shaderProgramPoint.bind();
-    m_shaderProgramPoint.setUniformValue("projection", projection);
-    m_shaderProgramPoint.setUniformValue("view", view);
-    m_shaderProgramPoint.setUniformValue("model", model);
+    m_shaderProgramLidarStablePoint.bind();
+    m_shaderProgramLidarStablePoint.setUniformValue("projection", projection);
+    m_shaderProgramLidarStablePoint.setUniformValue("view", view);
+    m_shaderProgramLidarStablePoint.setUniformValue("model", roboPose_in_map_);
 
     m_shaderProgramGlobalLidarMap.bind();
     m_shaderProgramGlobalLidarMap.setUniformValue("projection", projection);
@@ -219,15 +243,18 @@ void PointCloudOpenGLWidget::paintGL()
     glLineWidth(1.0f);
     glDrawArrays(GL_LINES, 0, 6);
 
-    //画点云
-    m_shaderProgramPoint.bind();
+    //画stable点云
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO_Point);
+    glBufferData(GL_ARRAY_BUFFER, m_lidarStablePointData.size() * sizeof(float), &m_lidarStablePointData[0], GL_STREAM_DRAW);
+
+    m_shaderProgramLidarStablePoint.bind();
     glBindVertexArray(m_VAO_Point);
-    glPointSize(1.0f);  // 设置点的大小
+    glPointSize(4.0f);  // 设置点的大小
      // 为了让OpenGL知道我们的坐标和颜色值构成的到底是什么，OpenGL需要你去指定这些数据所表示的
      // 渲染类型。我们是希望把这些数据渲染成一系列的点？一系列的三角形？还是仅仅是一个长长的线？
      // 做出的这些提示叫做图元(Primitive)，任何一个绘制指令的调用都将把图元传递给OpenGL。
      // 这是其中的几个：GL_POINTS、GL_TRIANGLES、GL_LINE_STRIP。
-    glDrawArrays(GL_POINTS, 0, m_pointCount);
+    glDrawArrays(GL_POINTS, 0, m_lidarStablePointCount);
 
     // 对m_VBO_GlobalLidarMap的数据进行更新
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO_GlobalLidarMap);
@@ -235,7 +262,7 @@ void PointCloudOpenGLWidget::paintGL()
     //画全局地图
     m_shaderProgramGlobalLidarMap.bind();
     glBindVertexArray(m_VAO_GlobalLidarMap);
-    glPointSize(1.0f);
+    glPointSize(2.0f);
     glDrawArrays(GL_POINTS, 0, m_globalLidarMapCount);
 }
 
@@ -413,7 +440,7 @@ void PointCloudOpenGLWidget::drawCooraxis(float length)
  * @param pointVertexs
  * @return
  */
-unsigned int PointCloudOpenGLWidget::drawPointdata(std::vector<float> &pointVertexs)
+unsigned int PointCloudOpenGLWidget::drawLidarStablePointdata()
 {
     /************************************** 生成顶点数组对象 (VAO) *********************************/
     // 使用 VAO 的主要好处是性能，可以将每个物体的顶点属性设置存储在一个 VAO 中，
@@ -436,7 +463,7 @@ unsigned int PointCloudOpenGLWidget::drawPointdata(std::vector<float> &pointVert
     // GL_STREAM_DRAW ：数据每次绘制时都会改变。
     // 如果，比如说一个缓冲中的数据将频繁被改变，那么使用的类型就是GL_DYNAMIC_DRAW或GL_STREAM_DRAW，
     // 这样就能确保显卡把数据放在能够高速写入的内存部分。
-    glBufferData(GL_ARRAY_BUFFER, pointVertexs.size() * sizeof(float), &pointVertexs[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, m_lidarStablePointData.size() * sizeof(float), &m_lidarStablePointData[0], GL_STREAM_DRAW);
 
     /****************设置顶点属性，设置VAO   告诉opengl如何解析缓存中的数据*************************/
     // 位置属性
@@ -456,7 +483,7 @@ unsigned int PointCloudOpenGLWidget::drawPointdata(std::vector<float> &pointVert
     //  将上下文的GL_ARRAY_BUFFER对象设回默认的ID-0,相当于与所创建的VAO和VBO解绑
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-    return (unsigned int)pointVertexs.size() / 4;
+    return (unsigned int)m_lidarStablePointData.size() / 4;
 }
 
 /**

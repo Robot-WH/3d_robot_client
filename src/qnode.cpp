@@ -115,6 +115,8 @@ void QNode::SubAndPubTopic() {
                            &QNode::dynamicLaserPointCallback, this);
   global_lidar_map_sub_ = n.subscribe("/global_map", 10,
                                       &QNode::globalLidarMapCallback, this);
+  lidar_stablePoint_sub_ = n.subscribe("/preprocessed_pointcloud", 10,
+                                      &QNode::lidarStablePointCallback, this);
 //  qDebug() << "stable_laser_point_topic: " << stable_laser_point_topic;
   // 图像话题的回调
   m_compressedImgSub0_ = n.subscribe("front_camera", 10,
@@ -213,6 +215,12 @@ void QNode::dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg)
 void QNode::globalLidarMapCallback(sensor_msgs::PointCloud2ConstPtr map) {
   // qDebug() << "globalLidarMapCallback";
   openGLWidget_->SetGlobalLidarMap(map);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::lidarStablePointCallback(sensor_msgs::PointCloud2ConstPtr scan) {
+  qDebug() << "lidarStablePointCallback";
+  openGLWidget_->SetLidarStablePoint(scan);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////

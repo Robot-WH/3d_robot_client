@@ -21,6 +21,7 @@ public:
     ~PointCloudOpenGLWidget();
     void updatePoints(const QVector<QVector3D> &points);
     void SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr map);
+    void SetLidarStablePoint(sensor_msgs::PointCloud2ConstPtr points);
     void SetRoboPose(const QMatrix4x4& pose);
     void SetOdomToMapTrans(const QMatrix4x4& pose);
 
@@ -35,13 +36,13 @@ protected:
 
     virtual unsigned int drawMeshline(float size, int count);
     virtual void drawCooraxis(float length);
-    virtual unsigned int drawPointdata(std::vector<float> &pointVertexs);
+    virtual unsigned int drawLidarStablePointdata();
     virtual unsigned int drawGlobalLidarMapData();
 
 protected:
     QOpenGLShaderProgram m_shaderProgramMesh;
     QOpenGLShaderProgram m_shaderProgramAxis;
-    QOpenGLShaderProgram m_shaderProgramPoint;
+    QOpenGLShaderProgram m_shaderProgramLidarStablePoint;
     QOpenGLShaderProgram m_shaderProgramGlobalLidarMap;
 
     unsigned int m_VBO_MeshLine;
@@ -56,10 +57,10 @@ protected:
     unsigned int m_VBO_GlobalLidarMap;
     unsigned int m_VAO_GlobalLidarMap;
 
-    std::vector<float> m_pointData;
+    std::vector<float> m_lidarStablePointData;
     std::vector<float> globalMapPointData;
-    unsigned int m_pointCount;
     unsigned int m_globalLidarMapCount;
+    unsigned int m_lidarStablePointCount;
 
     unsigned int m_vertexCount;
 
