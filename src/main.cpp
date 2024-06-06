@@ -28,8 +28,12 @@ int main(int argc, char **argv) {
   //共享opengl上下文
   //    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts)
   //    QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL);
+  QSurfaceFormat format;
+  format.setVersion(4, 3);
+  QSurfaceFormat::setDefaultFormat(format);
+
   MainWindow w(argc, argv);
-// w.showFullScreen();
+  // w.showFullScreen();
      w.show();
 //  app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
   QObject::connect(&w, &MainWindow::Quit, &app, &QCoreApplication::quit);

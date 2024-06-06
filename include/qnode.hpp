@@ -36,9 +36,11 @@
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>  //图像编码格式
+
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 #include <tf/transform_listener.h>
 
 #include <QDebug>
@@ -52,6 +54,13 @@
 #include <string>
 
 #include "roboItem.h"
+#include "ros_msg/control_info.h"
+#include "ros_msg/workspace_info.h"
+#include "ros_service/SetSpace.h"
+#include "ros_service/SaveTraj.h"
+#include "ros_service/SetTraj.h"
+#include "ros_service/SetCommand.h"
+#include "PointCloudOpenGLWidget.h"
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>
     MoveBaseClient;
@@ -78,12 +87,21 @@ class QNode : public QThread {
   void SetGridMapShowFlag(bool flag);
   // void SubImage(QString topic, int frame_id);
 //  void pub_imageMap(QImage map);
+  void pubGetWorkSpaceCmd();
+  void workspaceCallback(const ros_msg::workspace_info& msg);
+  void setSpaceCall(const QString& space_name, std::vector<uint16_t>& traj_cnt);
+  void saveTrajCall(const QString& traj_name, std::vector<uint16_t>& traj_id);
+  void setTrajCall(const uint16_t& traj_id, uint8_t& success);
+  void setWorkModeCall(const uint16_t& cmd, uint8_t& success);
+  void SetOpenGLWidget(PointCloudOpenGLWidget *openGLWidget);
   QPointF transScenePoint2Word(QPointF pos);
   QPointF transWordPoint2Scene(QPointF pos);
   QMap<QString, QString> get_topic_list();
   int mapWidth{0};
   int mapHeight{0};
   void run();             // 线程执行函数    继承自QThread
+  bool isWorkspaceUpdate();
+  const std::vector<std::string>& getWorkspace();
 
   /*********************
   ** Logging
@@ -96,6 +114,7 @@ class QNode : public QThread {
  public slots:
   void pub2DPose(QPointF,QPointF);
   void pub2DGoal(QPointF,QPointF);
+
  Q_SIGNALS:
   void loggingUpdated();
   void rosShutdown();
@@ -103,7 +122,7 @@ class QNode : public QThread {
   void speed_y(double y);
   void batteryState(sensor_msgs::BatteryState);
   void Master_shutdown();
-  void Show_image(int, QImage);
+  void showImage(int, QImage);
   void updateRoboPose(RobotPose pos);
   void updateMap(QImage map);
   void updateSubGridMap(QImage map, QPointF mapOrigin, float res, int width, int height);
@@ -123,12 +142,21 @@ class QNode : public QThread {
   ros::Subscriber dynamic_laser_point_sub_;
   ros::Subscriber battery_sub;
   ros::Subscriber m_plannerPathSub;
-  ros::Subscriber m_compressedImgSub0;
+  ros::Subscriber m_compressedImgSub0_;
   ros::Subscriber m_compressedImgSub1;
+  ros::Subscriber global_lidar_map_sub_;
+  // 信息交互
+  ros::Subscriber workspace_sub;
+
   ros::Publisher goal_pub;
   ros::Publisher cmd_pub;
   ros::Publisher reset_pub;
   ros::Publisher m_initialposePub;
+  ros::Publisher getWorkSpace_pub;
+  ros::ServiceClient set_space_client;
+  ros::ServiceClient save_traj_client;
+  ros::ServiceClient set_traj_client;
+  ros::ServiceClient set_workMode_client;
 //  image_transport::Publisher m_imageMapPub;
   MoveBaseClient *movebase_client;
   QStringListModel logging_model;
@@ -165,6 +193,7 @@ class QNode : public QThread {
   bool m_bMapIsInit = false;
   // gird map是否显示
   bool gridmap_show_flag = false;
+  bool workspace_update = false;
   // tf::TransformListener m_tfListener(ros::Duration(10));
   // ros::Timer m_rosTimer;
   QImage Mat2QImage(cv::Mat const &src);
@@ -173,11 +202,13 @@ class QNode : public QThread {
   tf::TransformListener *m_robotPoselistener;
   tf::TransformListener *m_Laserlistener;
   std::string base_frame, laser_frame, map_frame;
+  std::vector<std::string> workspace;
+  PointCloudOpenGLWidget *openGLWidget_;
 
  private:
   void speedCallback(const nav_msgs::Odometry::ConstPtr &msg);
   void batteryCallback(const sensor_msgs::BatteryState &message);
-  // void imageCallback0(const sensor_msgs::CompressedImageConstPtr &msg);
+  void imageCallback0(const sensor_msgs::ImageConstPtr &msg);
   // void imageCallback1(const sensor_msgs::CompressedImageConstPtr &msg);
   void myCallback(const std_msgs::Float64 &message_holder);
   void gridmapCallback(nav_msgs::OccupancyGrid::ConstPtr map);
@@ -185,6 +216,7 @@ class QNode : public QThread {
 //  void dynamicLaserPointCallback(sensor_msgs::LaserScanConstPtr scan);
   void stableLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
   void dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg);
+  void globalLidarMapCallback(sensor_msgs::PointCloud2ConstPtr map);
   void plannerPathCallback(nav_msgs::Path::ConstPtr path);
   void SubAndPubTopic();
   void updateRobotPose();

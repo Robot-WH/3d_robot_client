@@ -2,7 +2,7 @@
 # CMake
 ##############################################################################
 cmake_minimum_required(VERSION 3.0.2)
-project(my_gui)
+project(client_gui)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,18 +22,29 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp 
     tf
     sensor_msgs
-    # cv_bridge
+    cv_bridge
     std_msgs
-    
+    pcl_ros
 #    image_transport   
     )
 
 find_package(OpenCV REQUIRED)
+find_package(PCL 1.7 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 include_directories(
     ${catkin_INCLUDE_DIRS} 
     ${OpenCV_INCLUDE_DIRS}
-    ./include)
+    ${PCL_INCLUDE_DIRS}
+    ./include
+)
+
+#link_directories(
+#    # /home/lwh/cross_compile/usr/local/lib
+#    # /home/lwh/cross_compile/usr/lib/aarch64-linux-gnu
+#    /home/lwh/cross_compile/usr/lib/aarch64-linux-gnu/atlas
+#    /home/lwh/cross_compile/usr/lib
+#  )
 # Use this to define what the package will export (e.g. libs, headers).
 # Since the default here is to produce only a binary, we don't worry about
 # exporting anything. 
@@ -100,7 +111,7 @@ file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINK
 
 add_executable(my_gui_app ${QRC_FILES} ${QT_SOURCES} ${QT_RESOURCES_CPP} 
                                         ${QT_FORMS_HPP} ${QT_MOC_HPP})
-target_link_libraries(my_gui_app ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(my_gui_app ${QT_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${EIGEN3_LIBRARIES})
 install(TARGETS my_gui_app RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #############################################################################

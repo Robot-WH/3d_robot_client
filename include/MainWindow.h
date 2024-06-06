@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QProcess>
+#include <QListWidgetItem>
 #include "qnode.hpp"
 #include "roboItem.h"
 
@@ -45,9 +46,25 @@ protected:
   /**
    * @brief MainWindow::bringUpQtRosNode
    */
-  void bringUpQtRosNode();
+  bool ConnectRosMaster();
 
-  void viewCenterFocusOnRobot();
+private slots:
+  void on_radioButton_9_clicked();
+
+private slots:
+  void on_radioButton_10_clicked();
+
+private slots:
+  void on_radioButton_8_clicked();
+
+private slots:
+  void on_listWidget_2_itemDoubleClicked(QListWidgetItem *item);
+
+private slots:
+  void on_pushButton_4_clicked();
+
+private slots:
+  void on_listWidget_itemDoubleClicked(QListWidgetItem *item);
 
 private slots:
   void on_localgridmap_checkBox_stateChanged(int arg1);
@@ -56,9 +73,6 @@ private slots:
   void on_pushButton_reset_clicked();
 
 private slots:
-  void on_pushButton_minus_clicked();
-  void on_pushButton_plus_clicked();
-  void on_pushButton_return_clicked();
   void on_pushButton_clicked();
   /**
    * @brief MainWindow::on_bringup_button_clicked 启动机器人系统
@@ -72,16 +86,16 @@ private slots:
   void on_server_connect_Button_clicked();
 
   void slot_rosShutdown();
-  void slot_roboPos(QPointF pos);
+
+  void on_pushButton_7_clicked();
 
 private:
   Ui::MainWindow *ui;
+  QProcess *backend_process_;
   QProcess *frontend_process_;
-  QProcess *laser_process_;
-  QProcess *hardware_process_;
+  QProcess *rviz_process_;
   ros_qt::QNode qt_ros_node_;
 
-  QGraphicsScene *qgraphicsScene_ = NULL;
   ros_qt::roboItem *roboItem_ = NULL;
 };
 

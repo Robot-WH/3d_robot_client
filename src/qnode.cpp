@@ -5,7 +5,6 @@
  *
  * @date February 2011
  **/
-
 /*****************************************************************************
 ** Includes
 *****************************************************************************/
@@ -89,6 +88,12 @@ void QNode::SubAndPubTopic() {
   ros::NodeHandle n;
   // Add your ros communications here.
   QSettings settings("ros_qt5_gui_app", "Displays");
+  // 速度控制话题
+  //  cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+  // 重置设置话题
+  reset_pub = n.advertise<std_msgs::Bool>("cmd_reset", 1);
+  getWorkSpace_pub = n.advertise<std_msgs::Bool>("getWorkSpace", 1);
+
   // 创建速度话题的订阅者
   //  cmdVel_sub = n.subscribe<nav_msgs::Odometry>(odom_topic.toStdString(), 200,
   //                                               &QNode::speedCallback, this);
@@ -97,10 +102,6 @@ void QNode::SubAndPubTopic() {
   // 地图订阅
   QString occ_grid_topic = settings.value("Map/occ_grid_topic", QString("/map")).toString();
   map_sub = n.subscribe(occ_grid_topic.toStdString(), 1000, &QNode::gridmapCallback, this);
-  // 速度控制话题
-  //  cmd_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
-  // 重置设置话题
-  reset_pub = n.advertise<std_msgs::Bool>("cmd_reset", 1);
   // 激光雷达点云话题订阅
   stable_laser_point_topic = settings.value("Laser/stable_laser_point", QString("/stable_laser_points")).toString();
   stable_laser_point_sub_ = n.subscribe(stable_laser_point_topic.toStdString(), 1000,
@@ -110,8 +111,12 @@ void QNode::SubAndPubTopic() {
   dynamic_laser_point_topic = settings.value("Laser/dynamic_laser_point_topic", QString("/dynamic_laser_points")).toString();
   dynamic_laser_point_sub_ = n.subscribe(dynamic_laser_point_topic.toStdString(), 1000,
                            &QNode::dynamicLaserPointCallback, this);
+  global_lidar_map_sub_ = n.subscribe("/global_map", 10,
+                                      &QNode::globalLidarMapCallback, this);
 //  qDebug() << "stable_laser_point_topic: " << stable_laser_point_topic;
-
+  // 图像话题的回调
+  m_compressedImgSub0_ = n.subscribe("front_camera", 10,
+                                     &QNode::imageCallback0, this);
 //  image_transport::ImageTransport it(n);
 //  m_imageMapPub = it.advertise("image/map", 10);
 
@@ -123,6 +128,8 @@ void QNode::SubAndPubTopic() {
 //      n.subscribe(path_topic, 1000, &QNode::plannerPathCallback, this);
 //  m_initialposePub = n.advertise<geometry_msgs::PoseWithCovarianceStamped>(
 //      initPose_topic.toStdString(), 10);
+
+  workspace_sub = n.subscribe("/workspace", 100, &QNode::workspaceCallback, this);
 
   m_robotPoselistener = new tf::TransformListener;
   m_Laserlistener = new tf::TransformListener;
@@ -137,6 +144,10 @@ void QNode::SubAndPubTopic() {
 //  }
 //  movebase_client = new MoveBaseClient("move_base", true);
 //  movebase_client->waitForServer(ros::Duration(1.0));
+  set_space_client = n.serviceClient<lifelong_backend::SetSpace>("SetSpace");
+  save_traj_client = n.serviceClient<lifelong_backend::SaveTraj>("SaveTraj");
+  set_traj_client = n.serviceClient<lifelong_backend::SetTraj>("SetTraj");
+  set_workMode_client = n.serviceClient<lifelong_backend::SetCommand>("SetWorkMode");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,6 +202,15 @@ void QNode::dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg)
     dynamicLaserPoints.append(pos);
   }
   emit updateDynamicLaserScan(dynamicLaserPoints);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief QNode::dynamicLaserPointCallback 激光雷达动态点云话题回调
+/// \param laser_msg
+///
+void QNode::globalLidarMapCallback(sensor_msgs::PointCloud2ConstPtr map) {
+  qDebug() << "globalLidarMapCallback";
+  openGLWidget_->SetGlobalLidarMap(map);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -266,6 +286,11 @@ void QNode::SetReset() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::SetGridMapShowFlag(bool flag) {
   gridmap_show_flag = flag;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::SetOpenGLWidget(PointCloudOpenGLWidget *openGLWidget) {
+  openGLWidget_ = openGLWidget;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -400,7 +425,6 @@ void QNode::move_base(char k, float speed_linear, float speed_trun) {
   ros::spinOnce();
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// 订阅图片话题，并在label上显示
 // void QNode::SubImage(QString topic, int frame_id) {
@@ -415,6 +439,13 @@ void QNode::move_base(char k, float speed_linear, float speed_trun) {
 //   }
 //   ros::spinOnce();
 // }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::pubGetWorkSpaceCmd() {
+  std_msgs::Bool flag;
+  flag.data = true;
+  getWorkSpace_pub.publish(flag);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void QNode::pub2DPose(QPointF start_pose,QPointF end_pose){
@@ -477,22 +508,51 @@ QPointF QNode::transWordPoint2Scene(QPointF pose) {
 //  m_imageMapPub.publish(msg);
 //}
 
-//图像话题的回调函数
-// void QNode::imageCallback0(const sensor_msgs::CompressedImageConstPtr& msg) {
-//   cv_bridge::CvImagePtr cv_ptr;
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 图像话题的回调函数
+ void QNode::imageCallback0(const sensor_msgs::ImageConstPtr& msg) {
+   try {
+     // 深拷贝转换为opencv类型
+     cv_bridge::CvImagePtr cv_ptr_compressed =
+         cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    if (cv_ptr_compressed->image.empty()) {
+      qDebug() << "image.empty()";
+    } else {
+      // cv::imshow("USB Camera", cv_ptr_compressed->image);  // 显示图像
+      // char key = cv::waitKey(10);
+    }
+    
+    QImage im = Mat2QImage(cv_ptr_compressed->image);
+     emit showImage(0, im);
+    //  qDebug() << "imageCallback0";
+   } catch (cv_bridge::Exception& e) {
+     log(Error, ("video frame0 exception: " + QString(e.what())).toStdString());
+     return;
+   }
+ }
 
-//   try {
-//     //深拷贝转换为opencv类型
-//     cv_bridge::CvImagePtr cv_ptr_compressed =
-//         cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-//     QImage im = Mat2QImage(cv_ptr_compressed->image);
-//     emit Show_image(0, im);
-//   } catch (cv_bridge::Exception& e) {
-//     log(Error, ("video frame0 exception: " + QString(e.what())).toStdString());
-//     return;
-//   }
-// }
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void QNode::workspaceCallback(const ros_msg::workspace_info& msg) {
+   std::cout << "workspaceCallback" << std::endl;
+   // std::cout << "name: " << name << std::endl;
+   for (int i = 0; i < msg.space_name.size(); ++i) {
+     workspace.push_back(msg.space_name[i]);
+   }
+   workspace_update = true;
+ }
 
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ bool QNode::isWorkspaceUpdate() {
+   return workspace_update;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ const std::vector<std::string>& QNode::getWorkspace() {
+   workspace_update = false;
+   return workspace;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // void QNode::imageCallback1(const sensor_msgs::CompressedImageConstPtr& msg) {
 //   cv_bridge::CvImagePtr cv_ptr;
 
@@ -507,6 +567,46 @@ QPointF QNode::transWordPoint2Scene(QPointF pose) {
 //     return;
 //   }
 // }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void QNode::setSpaceCall(const QString& space_name, std::vector<uint16_t>& traj_id) {
+   lifelong_backend::SetSpaceRequest req;
+   req.space_name = space_name.toStdString();
+   lifelong_backend::SetSpaceResponse res;
+   set_space_client.call(req, res);
+   qDebug() << "setSpaceCall space_name:" << space_name << "res: " << res.traj_id;
+   traj_id = res.traj_id;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void QNode::saveTrajCall(const QString& traj_name, std::vector<uint16_t>& traj_id) {
+   lifelong_backend::SaveTrajRequest req;
+   req.traj_name = traj_name.toStdString();
+   lifelong_backend::SaveTrajResponse res;
+   save_traj_client.call(req, res);
+   traj_id = res.traj_id;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void QNode::setTrajCall(const uint16_t& traj_id, uint8_t& success) {
+   lifelong_backend::SetTrajRequest req;
+   req.traj_id = traj_id;
+   lifelong_backend::SetTrajResponse res;
+   set_traj_client.call(req, res);
+   qDebug() << "setTrajCall traj_id:" << traj_id << "res: " << (int)res.success;
+   success = res.success;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////
+ void QNode::setWorkModeCall(const uint16_t& cmd, uint8_t& success) {
+   lifelong_backend::SetCommandRequest req;
+   req.type = 1;
+   req.cmd = cmd;
+   lifelong_backend::SetCommandResponse res;
+   set_workMode_client.call(req, res);
+   qDebug() << "res: " << (int)res.success;
+   success = res.success;
+ }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 QImage QNode::rotateMapWithY(QImage map) {

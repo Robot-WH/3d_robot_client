@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <cstdlib>
+
 #include "MainWindow.h"
 #include "ui_MainWindow.h"    // build/my_gui下 
 
@@ -16,14 +18,16 @@ MainWindow::MainWindow(int argc, char **argv, QWidget *parent) :
     QWidget(parent), ui(new Ui::MainWindow), qt_ros_node_(argc, argv) {
   initUI();    // 初始化UI
   initParm(); // 初始化参数
+  //创建item
+  roboItem_ = new ros_qt::roboItem();
   // 系统信息输出
   ui->msg_output->setReadOnly(true);
   // 设置最大显示文本容量为100个文本块
   ui->msg_output->document()->setMaximumBlockCount(100);
 
   frontend_process_ = new QProcess;
-  laser_process_ = new QProcess;
-  hardware_process_ = new QProcess;
+  backend_process_ = new QProcess;
+  rviz_process_ = new QProcess;
   // 将ROS节点的输出重定向到QTextBrowser控件中
   QObject::connect(frontend_process_, &QProcess::readyReadStandardOutput, [&]() {
       QString output = frontend_process_->readAllStandardOutput();
@@ -31,15 +35,32 @@ MainWindow::MainWindow(int argc, char **argv, QWidget *parent) :
   });
   // 设置QProcess的标准输出通道为MergedChannels
   frontend_process_->setProcessChannelMode(QProcess::MergedChannels);
-  //
-  bringUpQtRosNode();
   // 信号，槽连接
   connection();
+
+  QPalette palette = ui->label_status->palette();  // 获取QLabel的调色板
+  palette.setColor(QPalette::WindowText, Qt::red);  // 设置文字颜色为红色
+  ui->label_status->setPalette(palette);  // 应用新的调色板
+  ui->label_status->setText("ROS主机未连接");
+  ui->label_status_img->setPixmap(QPixmap("://images/false.png"));  // 设置背景图片
+  ui->label_status_img->setScaledContents(true);  // 设置QLabel的内容自适应缩放
+  ui->label_status_img->show();
+  // ui->bringup_button->setEnabled(false);
+  qt_ros_node_.SetOpenGLWidget(ui->openGLWidget);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow() {
   qDebug() << "~MainWindow()";
+  if (frontend_process_->state() == QProcess::Running) {
+      frontend_process_->terminate();
+  }
+  if (backend_process_->state() == QProcess::Running) {
+      backend_process_->terminate();
+  }
+  if (rviz_process_->state() == QProcess::Running) {
+      rviz_process_->terminate();
+  }
   delete ui;
 }
 
@@ -49,8 +70,8 @@ void MainWindow::initUI() {
   //  Qt::Window: 指示窗口是一个普通窗口，拥有标题栏和边框。
   //  Qt::WindowTitleHint: 显示窗口标题栏。
   //  Qt::CustomizeWindowHint: 禁用默认的窗口装饰，即关闭、最大化和最小化按钮
-  //  this->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-//  this->setWindowFlags(Qt::FramelessWindowHint);  //去掉标题栏
+   this->setWindowFlags(Qt::Window);
+ // this->setWindowFlags(Qt::FramelessWindowHint);  //去掉标题栏
 
 //  this->setFixedSize(700, 500);
 //  // 显示界面的动态背景
@@ -72,64 +93,35 @@ void MainWindow::initUI() {
 //  // 标题处的机器人图片
 //  ui->label_robot_img->setPixmap(QPixmap("://images/robot.png"));
 //  ui->label_robot_img->setScaledContents(true);  // 设置QLabel的内容自适应缩放
-  ui->pushButton_plus->setIcon(QIcon(":/images/plus.png"));
-  ui->pushButton_plus->setFixedHeight(50);
-  ui->pushButton_plus->setFixedWidth(50);
-  ui->pushButton_minus->setIcon(QIcon(":/images/minus.png"));
-  ui->pushButton_minus->setFixedHeight(50);
-  ui->pushButton_minus->setFixedWidth(50);
-  ui->pushButton_return->setIcon(QIcon(":/images/set_return.png"));
-  ui->pushButton_return->setFixedHeight(50);
-  ui->pushButton_return->setFixedWidth(50);
-  //视图场景加载
-  qgraphicsScene_ =
-      new QGraphicsScene;  //要用QGraphicsView就必须要有QGraphicsScene搭配着用
-  qgraphicsScene_->clear();
-  //创建item
-  roboItem_ = new ros_qt::roboItem();
-  //视图添加item
-  qgraphicsScene_->addItem(roboItem_);
-  // widget添加视图
-  ui->mapViz->setScene(qgraphicsScene_);
 //  QRectF visibleRect = ui->mapViz->mapToScene(ui->mapViz->viewport()->geometry()).boundingRect();
 //  QPointF visibleRect = ui->mapViz->mapToScene(0, 0);
 //  QPointF sceneCenter = ui->mapViz->mapToScene(ui->mapViz->viewport()->rect().topLeft());
 //  qDebug() << "sceneCenter w:" << sceneCenter.x() << ", h: " << sceneCenter.y();
-  // 视图内   显示内容UI设置
-  QString styleSheet = "QCheckBox::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
-        QCheckBox{font-size: 18px;color: rgb(0, 191, 255);}\
-        QCheckBox::checked{color:rgb(50,205,50);}\
-        QCheckBox::unchecked{color:rgb(119, 136, 153);}\
-        ";
-  ui->localgridmap_checkBox->setStyleSheet(styleSheet);
-  ui->checkBox_2->setStyleSheet(styleSheet);
-  ui->checkBox_3->setStyleSheet(styleSheet);
-  ui->checkBox_4->setStyleSheet(styleSheet);
-  ui->checkBox_5->setStyleSheet(styleSheet);
-  ui->checkBox_6->setStyleSheet(styleSheet);
-  // 视图内   视角选择UI设置
-  styleSheet = "QRadioButton::indicator{width: 22px;height: 22px;color:rgb(0, 191, 255)}\
-      QRadioButton{font-size: 18px;color: rgb(0, 191, 255);}\
-      QRadioButton::checked{color:rgb(50,205,50);}\
-      QRadioButton::unchecked{color:rgb(119, 136, 153);}\
-      ";
-  ui->radioButton->setStyleSheet(styleSheet);
-  ui->radioButton_2->setStyleSheet(styleSheet);
-  ui->radioButton_4->setStyleSheet(styleSheet);
-  ui->radioButton_4->setChecked(true);
-
-  ui->groupBox_3->setFixedWidth(200);
-  ui->groupBox_6->setFixedHeight(250);
+  ui->tabWidget->setFixedWidth(400);
+//  ui->groupBox_10->setFixedWidth(300);
+//  ui->groupBox_6->setFixedHeight(250);
   // 放大缩小设置
 //  ui->groupBox_5->setFixedWidth(40);
 ////  ui->groupBox_5->setStyleSheet("QGroupBox { padding: 2px; }");
 //  ui->groupBox_5->setStyleSheet("QGroupBox { border: none; }");
 
-  ui->server_connect_Button->setFixedHeight(60);
-  ui->server_connect_Button->setFixedWidth(60);
+  // ui->server_connect_Button->setFixedHeight(60);
+  // ui->server_connect_Button->setFixedWidth(60);
 //  // 退出
 //  ui->pushButton->setFixedHeight(50);
 //  ui->pushButton->setFixedWidth(100);
+  // ui->image_label_0->setFixedSize(300, 200);
+  ui->listWidget->setFixedHeight(100);
+  ui->listWidget_2->setFixedHeight(100);
+  ui->listWidget_2->setFixedWidth(80);
+
+  ui->groupBox_2->setFixedHeight(90);
+  ui->groupBox_3->setFixedHeight(90);
+  // ui->verticalLayout_2->setFixedHeight(ui->groupBox_3->height());
+  // ui->verticalLayout_2->setFixedWidth(ui->groupBox_3->width());
+  // ui->verticalLayout_2->SetFixedSize();
+  // this->setFixedHeight(ui->groupBox_3->height());
+  // this->setFixedWidth(ui->groupBox_3->width());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,22 +138,15 @@ void MainWindow::connection() {
           &ros_qt::roboItem::paintDynamicLaserScan);
   connect(&qt_ros_node_, &ros_qt::QNode::updateSubGridMap, roboItem_,
           &ros_qt::roboItem::paintSubGridMap);
+  connect(&qt_ros_node_, &ros_qt::QNode::showImage, roboItem_,
+          [&](const int& num, const QImage& img) {
+  });
+
   // 机器人pose -> map
   connect(&qt_ros_node_, &ros_qt::QNode::updateRoboPose, roboItem_,
           &ros_qt::roboItem::paintRoboPos);
-  // 间断跟踪模式下对robopos的处理
-  connect(roboItem_, &ros_qt::roboItem::roboPos , this,
-          &MainWindow::slot_roboPos);
   // radioButton
   // QRadioButton 有一个状态切换的信号 toggled，即该信号在状态切换时发送；
-  connect(ui->radioButton, &QRadioButton::toggled, [=](bool isChecked){
-      if (isChecked == true) {
-        roboItem_->SetVisualMode(ros_qt::roboItem::VisualMode::translate_tracking);
-      }
-  });
-  connect(ui->radioButton_2, &QRadioButton::toggled, [=](bool isChecked){
-      if (isChecked == true) {}
-  });
   // 设置激光雷达颠倒
   connect(ui->radioButton_3, &QRadioButton::toggled, [=](bool isChecked){
       if (isChecked == true) {
@@ -170,19 +155,20 @@ void MainWindow::connection() {
         roboItem_->SetLaserInverted(false);
       }
   });
-  connect(ui->radioButton_4, &QRadioButton::toggled, [=](bool isChecked){
-      if (isChecked == true) {
-        roboItem_->SetVisualMode(ros_qt::roboItem::VisualMode::internal_tracking);
-      }
-  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-void MainWindow::bringUpQtRosNode() {
+bool MainWindow::ConnectRosMaster() {
   // 读取本机的IP
   QString hostUrl = getLocalIpAddress();
+  if (hostUrl.isEmpty()) {
+    // hostUrl = "NanoPi-M4";
+    // qDebug() << "hostUrl.isEmpty() " << getenv("HOSTNAME");
+    hostUrl = getenv("HOSTNAME");
+  }
   QString masterUrl = "http://" + hostUrl + ":11311";
-  //
+  // qDebug() << "masterUrl: " << masterUrl;
+  // 连接ros master
   if (!qt_ros_node_.init(masterUrl.toStdString(), hostUrl.toStdString())) {
     QPalette palette = ui->label_status->palette();  // 获取QLabel的调色板
     palette.setColor(QPalette::WindowText, Qt::red);  // 设置文字颜色为红色
@@ -192,15 +178,16 @@ void MainWindow::bringUpQtRosNode() {
     ui->label_status_img->setScaledContents(true);  // 设置QLabel的内容自适应缩放
     ui->label_status_img->show();
     ui->bringup_button->setEnabled(false);
-    return;
+    return false;
   } else {
     QPalette palette = ui->label_status->palette();  // 获取QLabel的调色板
     palette.setColor(QPalette::WindowText, Qt::darkGreen);  // 设置文字颜色为红色
     ui->label_status->setPalette(palette);  // 应用新的调色板
-    ui->label_status->setText("ROS 连接成功");
+    ui->label_status->setText("ROS Master 连接成功");
     ui->label_status_img->setPixmap(QPixmap("://images/ok.png"));  // 设置背景图片
     ui->label_status_img->setScaledContents(true);  // 设置QLabel的内容自适应缩放
     ui->label_status_img->show();
+    ui->bringup_button->setEnabled(true);
 //    //初始化视频订阅的显示
 //    initVideos();
 //    //显示话题列表
@@ -208,7 +195,7 @@ void MainWindow::bringUpQtRosNode() {
 //    initOthers();
   }
 //  ReadSettings();
-  return;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,18 +203,8 @@ void MainWindow::on_bringup_button_clicked() {
   // startDetached 启动的进程不能进行通信，也不能输出重定向，但是，主线程退出后不会影响该子进程的执行
   // frontend_process_->startDetached("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
   //   启动roslaunch命令
-// hardware_process_->start("roslaunch", QStringList() << "robot_control" << "robot_control.launch");
-// laser_process_->start("roslaunch", QStringList() << "ydlidar_ros_driver" << "lidar.launch");
-// // 延时1s  不然启动有问题
-// QTime t;
-// t.start();
-// while(t.elapsed()<1000)//1000ms = 1s
-//       QCoreApplication::processEvents();
-
-//frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend.launch");
-//  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "frontend_view.launch");
-   frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend_view.launch");
-//  frontend_process_->start("roslaunch", QStringList() << "calib_fusion_2d" << "dataset_frontend.launch");
+  frontend_process_->start("roslaunch", QStringList() << "lwio" << "kitti_advanced_lio_velodyne_icp_timedIvox.launch");
+  backend_process_->start("roslaunch", QStringList() << "lifelong_backend" << "backend.launch");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,27 +223,46 @@ QString MainWindow::getLocalIpAddress() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::on_server_connect_Button_clicked() {
-    QString ip = ui->line_ip_Edit->text();
-    QString port = ui->line_port_Edit->text();
-    qDebug() << "ip: " << ip;
-    qDebug() << "port: " << port;
-    // 1、建立socket
-    // PF_INET: IPv4, SOCK_STREAM: TCP
-    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(sockfd >= 0);
-    // 2、socket绑定
-    struct sockaddr_in address;
-    std::memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;   // ipv4
-    inet_pton(AF_INET, ip.toStdString().c_str(), &address.sin_addr);
-    address.sin_port = htons(8080);
-    // 连接服务器
-    if (::connect(sockfd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        QMessageBox::information(nullptr, "提示", "连接服务器失败");
-    } else {
-        QMessageBox::information(nullptr, "提示", "连接服务器成功！");
-    }
+    // QString ip = ui->line_ip_Edit->text();
+    // QString port = ui->line_port_Edit->text();
+    // qDebug() << "ip: " << ip;
+    // qDebug() << "port: " << port;
+    // // 1、建立socket
+    // // PF_INET: IPv4, SOCK_STREAM: TCP
+    // int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    // assert(sockfd >= 0);
+    // // 2、socket绑定
+    // struct sockaddr_in address;
+    // std::memset(&address, 0, sizeof(address));
+    // address.sin_family = AF_INET;   // ipv4
+    // inet_pton(AF_INET, ip.toStdString().c_str(), &address.sin_addr);
+    // address.sin_port = htons(8080);
+    // // 连接服务器
+    // if (::connect(sockfd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    //     QMessageBox::information(nullptr, "提示", "连接服务器失败");
+    // } else {
+    //     QMessageBox::information(nullptr, "提示", "连接服务器成功！");
+    // }
+    ConnectRosMaster();
+    // 延时
+    QTime t;
+    t.start();
+    while(t.elapsed()<500)
+          QCoreApplication::processEvents();
+    // 连接后，读取工作空间
+    qt_ros_node_.pubGetWorkSpaceCmd();
+    // 最多等待500ms
+    t.start();
+    while(t.elapsed() < 500) {
+      if (qt_ros_node_.isWorkspaceUpdate()) {
+        const auto& workspace = qt_ros_node_.getWorkspace();
 
+        for (const auto& name : workspace) {
+          ui->listWidget->addItem(QString::fromStdString(name));
+        }
+        break;
+      }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -274,98 +270,122 @@ void MainWindow::slot_rosShutdown() {
   qDebug() << "slot_rosShutdown";
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief MainWindow::slot_roboPos
-/// \param pos item 坐标系下的robot pos
-///
-void MainWindow::slot_roboPos(QPointF pos) {
-  QPointF ScenePos = roboItem_->mapToScene(pos);
-  QPointF ViewPos = ui->mapViz->mapFromScene(ScenePos);
-  QRect view_rect = ui->mapViz->viewport()->rect();   // 获取视图坐标范围
-//  qDebug() << "ViewPos.x(): " << ViewPos.x() << ", y: " << ViewPos.y();
-  if (ViewPos.x() < view_rect.width() * 0.2 || ViewPos.x() > view_rect.width() * 0.8
-        || ViewPos.y() < view_rect.height() * 0.2 || ViewPos.y() > view_rect.height() * 0.8) {
-    // 视图中心的item坐标系坐标
-    QPointF scene_center = ui->mapViz->mapToScene(view_rect.center());   // 视图坐标系转换到scene坐标系
-    QPointF scene_center_itempos = roboItem_->mapFromScene(scene_center);   // 再由scene坐标系转换到Item坐标系
-    // 将view的中心移动到机器人上
-    float dx = roboItem_->GetScale() * (scene_center_itempos.x() - pos.x());
-    float dy = roboItem_->GetScale() * (scene_center_itempos.y() - pos.y());
-    roboItem_->move(dx, dy);
-  }
-}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::on_pushButton_clicked() {
     if (frontend_process_->state() == QProcess::Running) {
         frontend_process_->terminate();
     }
-    if (laser_process_->state() == QProcess::Running) {
-        laser_process_->terminate();
-    }
-    if (hardware_process_->state() == QProcess::Running) {
-        hardware_process_->terminate();
+    if (backend_process_->state() == QProcess::Running) {
+        backend_process_->terminate();
     }
     emit Quit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief MainWindow::viewCenterFocusOnRobot
-///
-void MainWindow::viewCenterFocusOnRobot() {
-  QPoint viewCenter = ui->mapViz->viewport()->rect().center();   // 获取视图中心的坐标(视图坐标系)
-  QPointF sceneCenter = ui->mapViz->mapToScene(viewCenter);   // 视图坐标系转换到scene坐标系
-  QPointF itemPoint = roboItem_->mapFromScene(sceneCenter);   // 再由scene坐标系转换到Item坐标系
-  const QPointF& robo_pos = roboItem_->GetRoboPos();
-  float dx = roboItem_->GetScale() * (itemPoint.x() - robo_pos.x());
-  float dy = roboItem_->GetScale() * (itemPoint.y() - robo_pos.y());
-  roboItem_->move(dx, dy);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief MainWindow::on_pushButton_return_clicked
-///             将视图中心与机器人对齐
-void MainWindow::on_pushButton_return_clicked() {
-    viewCenterFocusOnRobot();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief MainWindow::on_pushButton_plus_clicked
-///             放大操作
-void MainWindow::on_pushButton_plus_clicked() {
-  // 获取放大操作的中心位置(相对于view窗口中心进行放大)
-  QPoint viewCenter = ui->mapViz->viewport()->rect().center();   // 获取视图中心的坐标(视图坐标系)
-  QPointF sceneCenter = ui->mapViz->mapToScene(viewCenter);   // 视图坐标系转换到scene坐标系
-  QPointF itemPoint = roboItem_->mapFromScene(sceneCenter);   // 再由scene坐标系转换到Item坐标系
-  roboItem_->ChangeScale(1, roboItem_->GetScale() * itemPoint);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \brief MainWindow::on_pushButton_minus_clicked
-/// 缩小操作
-void MainWindow::on_pushButton_minus_clicked() {
-  // 获取缩小操作的中心位置(相对于view窗口中心进行缩小)
-  QPoint viewCenter = ui->mapViz->viewport()->rect().center();   // 获取视图中心的坐标(视图坐标系)
-  QPointF sceneCenter = ui->mapViz->mapToScene(viewCenter);   // 视图坐标系转换到scene坐标系
-  QPointF itemPoint = roboItem_->mapFromScene(sceneCenter);   // 再由scene坐标系转换到Item坐标系
-  roboItem_->ChangeScale(0, roboItem_->GetScale() * itemPoint);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::on_pushButton_reset_clicked() {
+  // qDebug() << "pushButton_reset";
   qt_ros_node_.SetReset();
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::on_localgridmap_checkBox_stateChanged(int arg1) {
     if (arg1) {
-//      qDebug() << "localgridmap on";
+    //  qDebug() << "localgridmap on";
        qt_ros_node_.SetGridMapShowFlag(true);
        roboItem_->SetGridMapShow(true);
     } else {
-//      qDebug() << "localgridmap off";
+    //  qDebug() << "localgridmap off";
       qt_ros_node_.SetGridMapShowFlag(false);
       roboItem_->SetGridMapShow(false);
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief 地图空间双击选择
+/// \param item
+///
+void MainWindow::on_listWidget_itemDoubleClicked(QListWidgetItem *item) {
+    std::vector<uint16_t> traj_id;
+    // 发送设置space的服务
+    qt_ros_node_.setSpaceCall(item->text(), traj_id);
+    ui->label_6->setText(QString::number(traj_id.size()));
+    ui->listWidget_2->clear();
+
+    for (const auto& id : traj_id) {
+      ui->listWidget_2->addItem(QString::number(id));
+    }
+
+    ui->label_9->setText(item->text());
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief 保存轨迹
+///
+void MainWindow::on_pushButton_4_clicked() {
+  std::vector<uint16_t> traj_id;
+  qt_ros_node_.saveTrajCall(QString(""), traj_id);
+  QMessageBox::information(nullptr, "提示", "保存成功！");
+
+  ui->label_6->setText(QString::number(traj_id.size()));
+  ui->listWidget_2->clear();
+
+  for (const auto& id : traj_id) {
+    ui->listWidget_2->addItem(QString::number(id));
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief 轨迹列表双击
+/// \param item
+///
+void MainWindow::on_listWidget_2_itemDoubleClicked(QListWidgetItem *item) {
+  uint8_t success = 0;
+  uint16_t num = item->text().toUInt();
+  // qDebug() << "num: " << num;
+  qt_ros_node_.setTrajCall(num, success);
+  if (!success) {
+    QMessageBox::information(nullptr, "错误", "轨迹不存在！");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief MainWindow::on_radioButton_8_clicked
+/// 工作模式-长期建图与定位模式选择
+void MainWindow::on_radioButton_8_clicked() {
+  uint8_t res = 0;
+  qt_ros_node_.setWorkModeCall(1, res);
+  if (res) {
+    QMessageBox::information(nullptr, "提示", "设置为长期建图与定位模式");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief MainWindow::on_radioButton_10_clicked
+/// 工作模式-定位模式选择
+void MainWindow::on_radioButton_10_clicked() {
+  uint8_t res = 0;
+  qt_ros_node_.setWorkModeCall(2, res);
+  if (res) {
+    QMessageBox::information(nullptr, "提示", "设置为纯定位模式");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief MainWindow::on_radioButton_9_clicked
+///工作模式-建图模式选择
+void MainWindow::on_radioButton_9_clicked() {
+  uint8_t res = 0;
+  qt_ros_node_.setWorkModeCall(3, res);
+  if (res) {
+    QMessageBox::information(nullptr, "提示", "设置为纯建图模式");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void MainWindow::on_pushButton_7_clicked()
+{
+  rviz_process_->start("roslaunch", QStringList() << "lifelong_backend" << "rviz.launch");
 }
 

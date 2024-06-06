@@ -37,7 +37,7 @@ void roboItem::setRobotVis(eRobotColor color) {
   QMatrix matrix;
   matrix.rotate(90);
   robotImg = robotImg.transformed(matrix, Qt::SmoothTransformation);
-  robotImg = robotImg.scaled(robotImg.width() * 4, robotImg.height() * 4);
+  robotImg = robotImg.scaled(robotImg.width() * 2, robotImg.height() * 2);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -328,7 +328,7 @@ void roboItem::setMin() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 void roboItem::setDefaultScale() {
-  m_scaleValue = 0.2;
+  m_scaleValue = 0.5;
   this->setScale(m_scaleValue);
 //  this->moveBy(0, 0);
 }
@@ -424,7 +424,7 @@ void roboItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
 //    qDebug() << "mousePressEvent";
   if (event->button() == Qt::LeftButton) {
     m_startPose = event->pos();  //鼠标左击时，获取当前鼠标在图片中的坐标，
-    qDebug() << "Press pos x: " << m_startPose.x() << ",y: " << m_startPose.y();
+    // qDebug() << "Press pos x: " << m_startPose.x() << ",y: " << m_startPose.y();
     m_isMousePress = true;  //标记鼠标左键被按下
   } else if (event->button() == Qt::RightButton) {
     // ResetItemPos();//右击鼠标重置大小
