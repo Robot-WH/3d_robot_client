@@ -17,24 +17,6 @@ PointCloudOpenGLWidget::PointCloudOpenGLWidget(QWidget *parent)
     m_yTrans = 0.0;
     m_zTrans = 50;
     m_zoom = 45.0;
-
-    // std::string file_path = "/home/lwh/global_map.pcd";
-    // std::string file_path = "/home/lwh/SlamDataBase/KittiMap/KeyFramePoints/key_frame_filtered0.pcd";
-    // pcl::PointCloud<pcl::PointXYZ> origin_points;
-    // if (pcl::io::loadPCDFile(file_path, origin_points) < 0) {
-    //     std::cout << "loadPCDFile error" << "\n";
-    //     return;
-    // }
-    // std::cout << "loadPCDFile, size: " << origin_points.size() << std::endl;
-    // globalMapPointData.clear();
-    // for(const auto& point : origin_points)
-    // {
-    //     globalMapPointData.push_back(point.x);
-    //     globalMapPointData.push_back(point.y);
-    //     globalMapPointData.push_back(point.z);
-    //     globalMapPointData.push_back(1);
-    // }
-    qDebug() << "globalMapPointData size: " << globalMapPointData.size();
 }
 
 PointCloudOpenGLWidget::~PointCloudOpenGLWidget()
@@ -132,11 +114,11 @@ void PointCloudOpenGLWidget::initializeGL()
     m_shaderProgramAxis.link();
 
     // link pointcloud shaders
-    // m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
-    //         "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.vs");
-    // m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Fragment,      // 设置片段着色器
-    //         "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.fs");
-    // m_shaderProgramPoint.link();
+    m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.vs");
+    m_shaderProgramPoint.addShaderFromSourceFile(QOpenGLShader::Fragment,      // 设置片段着色器
+            "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.fs");
+    m_shaderProgramPoint.link();
 
     m_shaderProgramGlobalLidarMap.addShaderFromSourceFile(QOpenGLShader::Vertex,     // 设置顶点着色器
             "/home/lwh/code/client_ws/src/robot_gui/resources/shader/shader_point.vs");
@@ -145,10 +127,10 @@ void PointCloudOpenGLWidget::initializeGL()
     m_shaderProgramGlobalLidarMap.link();
 
     // m_vertexCount = drawMeshline(2.0, 16);
-    // m_pointCount = drawPointdata(m_pointData);
+    m_pointCount = drawPointdata(m_pointData);
     // qDebug() << "point_count" << m_pointCount;
     m_globalLidarMapCount = drawGlobalLidarMapData();
-    // drawCooraxis(1.0);
+    drawCooraxis(1.0);
 }
 
 /**
@@ -157,7 +139,7 @@ void PointCloudOpenGLWidget::initializeGL()
  */
 void PointCloudOpenGLWidget::paintGL()
 {
-    qDebug() << "paintGL";
+    // qDebug() << "paintGL";
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     /*
@@ -176,7 +158,7 @@ void PointCloudOpenGLWidget::paintGL()
     // model.translate(m_xTrans, m_yTrans, 0.0);
     // model.rotate(m_xRotate, 1.0, 0.0, 0.0);
     // model.rotate(m_zRotate, 0.0, 0.0, 1.0);
-    model.translate(0, 10, 0.0);
+    model.translate(0, 0, 0.0);
     model.rotate(0, 1.0, 0.0, 0.0);
     model.rotate(0, 0.0, 0.0, 1.0);
 
@@ -195,10 +177,10 @@ void PointCloudOpenGLWidget::paintGL()
     m_shaderProgramAxis.setUniformValue("view", view);
     m_shaderProgramAxis.setUniformValue("model", model2);
 
-    // m_shaderProgramPoint.bind();
-    // m_shaderProgramPoint.setUniformValue("projection", projection);
-    // m_shaderProgramPoint.setUniformValue("view", view);
-    // m_shaderProgramPoint.setUniformValue("model", model);
+    m_shaderProgramPoint.bind();
+    m_shaderProgramPoint.setUniformValue("projection", projection);
+    m_shaderProgramPoint.setUniformValue("view", view);
+    m_shaderProgramPoint.setUniformValue("model", model);
 
     m_shaderProgramGlobalLidarMap.bind();
     m_shaderProgramGlobalLidarMap.setUniformValue("projection", projection);
@@ -212,54 +194,25 @@ void PointCloudOpenGLWidget::paintGL()
     // glDrawArrays(GL_LINES, 0, m_vertexCount);    // 使用glDrawArrays绘制网格线
 
     //画坐标轴
-    // m_shaderProgramAxis.bind();
-    // glBindVertexArray(m_VAO_Axis);
-    // glLineWidth(1.0f);
-    // glDrawArrays(GL_LINES, 0, 6);
+    m_shaderProgramAxis.bind();
+    glBindVertexArray(m_VAO_Axis);
+    glLineWidth(1.0f);
+    glDrawArrays(GL_LINES, 0, 6);
 
     //画点云
-    // m_shaderProgramPoint.bind();
-    // glBindVertexArray(m_VAO_Point);
-    // glPointSize(1.0f);  // 设置点的大小
-    //  // 为了让OpenGL知道我们的坐标和颜色值构成的到底是什么，OpenGL需要你去指定这些数据所表示的
-    //  // 渲染类型。我们是希望把这些数据渲染成一系列的点？一系列的三角形？还是仅仅是一个长长的线？
-    //  // 做出的这些提示叫做图元(Primitive)，任何一个绘制指令的调用都将把图元传递给OpenGL。
-    //  // 这是其中的几个：GL_POINTS、GL_TRIANGLES、GL_LINE_STRIP。
-    // glDrawArrays(GL_POINTS, 0, m_pointCount);
-
-    // glGenVertexArrays(1, &m_VAO_GlobalLidarMap);
-    // glBindVertexArray(m_VAO_GlobalLidarMap);
-
-    // glGenBuffers(1, &m_VBO_GlobalLidarMap);
+    m_shaderProgramPoint.bind();
+    glBindVertexArray(m_VAO_Point);
+    glPointSize(1.0f);  // 设置点的大小
+     // 为了让OpenGL知道我们的坐标和颜色值构成的到底是什么，OpenGL需要你去指定这些数据所表示的
+     // 渲染类型。我们是希望把这些数据渲染成一系列的点？一系列的三角形？还是仅仅是一个长长的线？
+     // 做出的这些提示叫做图元(Primitive)，任何一个绘制指令的调用都将把图元传递给OpenGL。
+     // 这是其中的几个：GL_POINTS、GL_TRIANGLES、GL_LINE_STRIP。
+    glDrawArrays(GL_POINTS, 0, m_pointCount);
 
 
-
+    // 对m_VBO_GlobalLidarMap的数据进行更新
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO_GlobalLidarMap);
     glBufferData(GL_ARRAY_BUFFER, globalMapPointData.size() * sizeof(float), &globalMapPointData[0], GL_STREAM_DRAW);
-
-
-
-
-    // glBufferSubData(GL_ARRAY_BUFFER, 0, globalMapPointData.size() * sizeof(float), &globalMapPointData[0]);
-
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);   // 告诉OpenGL该如何解析顶点数据
-    // glEnableVertexAttribArray(0);
-    // 颜色属性
-    // glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(3 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // glBindVertexArray(0);
-
-    // glBindVertexArray(m_VAO_GlobalLidarMap);
-    // glBindBuffer(GL_ARRAY_BUFFER, m_VBO_GlobalLidarMap);
-    // glBufferSubData(GL_ARRAY_BUFFER, 0, globalMapPointData.size() * sizeof(float), &globalMapPointData[0]);
-
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);   // 告诉OpenGL该如何解析顶点数据
-    // glEnableVertexAttribArray(0);
-    // glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(3 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-
     //画全局地图
     m_shaderProgramGlobalLidarMap.bind();
     glBindVertexArray(m_VAO_GlobalLidarMap);
