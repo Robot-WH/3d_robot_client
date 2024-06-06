@@ -6,6 +6,7 @@
 #include <QOpenGLTexture>
 #include <QMouseEvent>
 #include <sensor_msgs/PointCloud2.h>
+#include <mutex>
 
 /**
  * @brief The PointCloudOpenGLWidget class
@@ -20,6 +21,8 @@ public:
     ~PointCloudOpenGLWidget();
     void updatePoints(const QVector<QVector3D> &points);
     void SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr map);
+    void SetRoboPose(const QMatrix4x4& pose);
+    void SetOdomToMapTrans(const QMatrix4x4& pose);
 
 protected:
     void initializeGL() override;
@@ -68,4 +71,7 @@ protected:
     float m_zoom;
     float last_angle;
     QPoint   lastPos;
+    QMatrix4x4 roboPose_in_map_;
+    QMatrix4x4 odom_to_map_;
+    std::mutex odom_to_map_mt_;
 };

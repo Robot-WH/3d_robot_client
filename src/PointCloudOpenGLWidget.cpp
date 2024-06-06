@@ -17,6 +17,8 @@ PointCloudOpenGLWidget::PointCloudOpenGLWidget(QWidget *parent)
     m_yTrans = 0.0;
     m_zTrans = 50;
     m_zoom = 45.0;
+    roboPose_in_map_.setToIdentity();
+    odom_to_map_.setToIdentity();
 }
 
 PointCloudOpenGLWidget::~PointCloudOpenGLWidget()
@@ -64,6 +66,24 @@ void PointCloudOpenGLWidget::SetGlobalLidarMap(sensor_msgs::PointCloud2ConstPtr 
 
   m_globalLidarMapCount = static_cast<GLsizei>(globalMapPointData.size() / 4);
   update();
+}
+
+/**
+ * @brief PointCloudOpenGLWidget::SetRoboPose
+ * @param pose
+ */
+void PointCloudOpenGLWidget::SetRoboPose(const QMatrix4x4& pose) {
+  qDebug() << "SetRoboPose";
+  odom_to_map_mt_.lock();
+  roboPose_in_map_ = odom_to_map_ * pose;
+  odom_to_map_mt_.unlock();
+  update();
+}
+
+void PointCloudOpenGLWidget::SetOdomToMapTrans(const QMatrix4x4& pose) {
+  odom_to_map_mt_.lock();
+  odom_to_map_ = pose;
+  odom_to_map_mt_.unlock();
 }
 
 /**
@@ -175,7 +195,7 @@ void PointCloudOpenGLWidget::paintGL()
     m_shaderProgramAxis.bind();
     m_shaderProgramAxis.setUniformValue("projection", projection);
     m_shaderProgramAxis.setUniformValue("view", view);
-    m_shaderProgramAxis.setUniformValue("model", model2);
+    m_shaderProgramAxis.setUniformValue("model", roboPose_in_map_);
 
     m_shaderProgramPoint.bind();
     m_shaderProgramPoint.setUniformValue("projection", projection);
@@ -208,7 +228,6 @@ void PointCloudOpenGLWidget::paintGL()
      // 做出的这些提示叫做图元(Primitive)，任何一个绘制指令的调用都将把图元传递给OpenGL。
      // 这是其中的几个：GL_POINTS、GL_TRIANGLES、GL_LINE_STRIP。
     glDrawArrays(GL_POINTS, 0, m_pointCount);
-
 
     // 对m_VBO_GlobalLidarMap的数据进行更新
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO_GlobalLidarMap);
@@ -303,25 +322,6 @@ void PointCloudOpenGLWidget::wheelEvent(QWheelEvent *event)
     {
         m_zTrans = 10000.0f;
     }
-
-    // static int i = 0;
-    // std::string file_path = "/home/lwh/SlamDataBase/KittiMap/KeyFramePoints/key_frame_filtered0.pcd";
-    // pcl::PointCloud<pcl::PointXYZ> origin_points;
-    // if (pcl::io::loadPCDFile(file_path, origin_points) < 0) {
-    //     std::cout << "loadPCDFile error" << "\n";
-    //     return;
-    // }
-    // std::cout << "loadPCDFile, size: " << origin_points.size() << std::endl;
-    // globalMapPointData.clear();
-    // for(const auto& point : origin_points)
-    // {
-    //     globalMapPointData.push_back(point.x + i);
-    //     globalMapPointData.push_back(point.y);
-    //     globalMapPointData.push_back(point.z);
-    //     globalMapPointData.push_back(1);
-    // }
-    // i++;
-    // m_globalLidarMapCount = static_cast<GLsizei>(globalMapPointData.size() / 4);
     update();
 }
 

@@ -102,6 +102,8 @@ void QNode::SubAndPubTopic() {
   // 地图订阅
   QString occ_grid_topic = settings.value("Map/occ_grid_topic", QString("/map")).toString();
   map_sub = n.subscribe(occ_grid_topic.toStdString(), 1000, &QNode::gridmapCallback, this);
+  roboOdomPos_sub_ = n.subscribe("/fusion_odom", 10, &QNode::roboOdomPosCallback, this);
+  odom_to_map_sub_ = n.subscribe("/odom_to_map", 10, &QNode::odomToMapCallback, this);
   // 激光雷达点云话题订阅
   stable_laser_point_topic = settings.value("Laser/stable_laser_point", QString("/stable_laser_points")).toString();
   stable_laser_point_sub_ = n.subscribe(stable_laser_point_topic.toStdString(), 1000,
@@ -209,8 +211,40 @@ void QNode::dynamicLaserPointCallback(sensor_msgs::PointCloudConstPtr laser_msg)
 /// \param laser_msg
 ///
 void QNode::globalLidarMapCallback(sensor_msgs::PointCloud2ConstPtr map) {
-  qDebug() << "globalLidarMapCallback";
+  // qDebug() << "globalLidarMapCallback";
   openGLWidget_->SetGlobalLidarMap(map);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::roboOdomPosCallback(nav_msgs::Odometry msg) {
+  qDebug() << "roboOdomPosCallback";
+  // 提取四元数和位置
+  geometry_msgs::Quaternion q = msg.pose.pose.orientation;
+  geometry_msgs::Point p = msg.pose.pose.position;
+  qDebug() << "p x:" << p.x << ",y: " << p.y << ",z:" << p.z;
+  // 将ROS四元数转换为Qt四元数
+  QQuaternion qtQ(q.w, q.x, q.y, q.z);
+  // 创建平移矩阵（基于位置）
+  QMatrix4x4 translationMatrix;
+  translationMatrix.translate(p.x, p.y, p.z);
+  translationMatrix.rotate(qtQ);
+  openGLWidget_->SetRoboPose(translationMatrix);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void QNode::odomToMapCallback(nav_msgs::Odometry msg) {
+  qDebug() << "odomToMapCallback";
+  // 提取四元数和位置
+  geometry_msgs::Quaternion q = msg.pose.pose.orientation;
+  geometry_msgs::Point p = msg.pose.pose.position;
+  // qDebug() << "p x:" << p.x << ",y: " << p.y << ",z:" << p.z;
+  // 将ROS四元数转换为Qt四元数
+  QQuaternion qtQ(q.w, q.x, q.y, q.z);
+  // 创建平移矩阵（基于位置）
+  QMatrix4x4 translationMatrix;
+  translationMatrix.translate(p.x, p.y, p.z);
+  translationMatrix.rotate(qtQ);
+  openGLWidget_->SetOdomToMapTrans(translationMatrix);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
